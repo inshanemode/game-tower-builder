@@ -1,11 +1,23 @@
 # -*- coding: utf-8 -*-
+import json
 import pygame
 import os
+import time
 from math import sin, cos, radians
+
+# Import Firebase (comment dòng này nếu chưa setup Firebase)
+try:
+    from firebase_config import firebase_auth
+    from login_screen import show_login_screen
+    FIREBASE_ENABLED = True
+except ImportError:
+    FIREBASE_ENABLED = False
+    print("Firebase chưa được cấu hình. Chỉ dùng leaderboard local.")
 
 pygame.init()
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Tower Building Game")
+
 
 # Tải hình nền
 BASE_DIR = os.path.dirname(__file__)
@@ -13,6 +25,16 @@ background_path = os.path.join(BASE_DIR, "assets", "background.png")
 background = pygame.image.load(background_path)
 background = pygame.transform.scale(background, (800, 600))
 
+pygame.mixer.init()
+try:
+    music_path = os.path.join(BASE_DIR, "assets", "basicsong.mp3")
+    pygame.mixer.music.load(music_path)
+    pygame.mixer.music.set_volume(0.5)  # Âm lượng 50%
+    pygame.mixer.music.play(-1)  # Loop vô hạn (-1 = lặp mãi)
+    print("✓ Đã bật nhạc nền")
+except Exception as e:
+    print(f"⚠ Không tải được nhạc: {e}")
+    
 # Thiết lập game
 grav = 0.5
 rope_length = 280
@@ -315,44 +337,58 @@ def pause_screen(screen, font_large, font_small, background, tower, block):
         clock.tick(30)
 
 def game_over_screen(screen, font_large, font_small, background, tower, block, score, level):
+    """Màn hình game over với option xem leaderboard"""
     waiting = True
+    show_options = True
     
     while waiting:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return False
+                return "quit"
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    return True
+                    return "restart"
+                elif event.key == pygame.K_l:
+                    return "leaderboard"
                 elif event.key == pygame.K_ESCAPE:
-                    return False
+                    return "menu"
         
         screen.fill((135, 206, 235))
         screen.blit(background, (0, 0))
         tower.draw()
         block.draw(tower.camera_y)
         
-        game_over_surface = pygame.Surface((420, 280))
+        game_over_surface = pygame.Surface((420, 340))
         game_over_surface.fill((30, 30, 50))
         
-        pygame.draw.rect(game_over_surface, (255, 80, 80), (0, 0, 420, 280), 6)
-        pygame.draw.rect(game_over_surface, (200, 50, 50), (6, 6, 408, 268), 3)
+        pygame.draw.rect(game_over_surface, (255, 80, 80), (0, 0, 420, 340), 6)
+        pygame.draw.rect(game_over_surface, (200, 50, 50), (6, 6, 408, 328), 3)
         
-        screen.blit(game_over_surface, (190, 160))
+        screen.blit(game_over_surface, (190, 130))
         
-        draw_text_with_outline(screen, "GAME OVER!", font_large, 295, 180, (255, 100, 100))
+        draw_text_with_outline(screen, "GAME OVER!", font_large, 295, 150, (255, 100, 100))
         
-        y = 240
+        y = 210
         draw_text_with_outline(screen, f"Diem cuoi: {score}", font_small, 310, y, (255, 255, 100))
         y += 40
         
         draw_text_with_outline(screen, f"Level dat: {level}", font_small, 310, y, (150, 200, 255))
-        y += 60
+        y += 50
         
-        draw_text_with_outline(screen, "Nhan R de choi lai", font_small, 285, y, (255, 255, 150))
+        # Hiển thị thông báo lưu điểm
+        if FIREBASE_ENABLED and firebase_auth.is_logged_in():
+            draw_text_with_outline(screen, "Diem da luu online!", font_small, 280, y, (150, 255, 150))
+        else:
+            draw_text_with_outline(screen, "Diem da luu local!", font_small, 285, y, (200, 200, 255))
+        y += 50
+        
+        draw_text_with_outline(screen, "R - Choi lai", font_small, 285, y, (255, 255, 150))
         y += 35
         
-        draw_text_with_outline(screen, "Nhan ESC de thoat", font_small, 285, y, (255, 200, 200))
+        draw_text_with_outline(screen, "L - Xem bang xep hang", font_small, 240, y, (255, 200, 100))
+        y += 35
+        
+        draw_text_with_outline(screen, "ESC - Ve menu", font_small, 285, y, (255, 200, 200))
         
         pygame.display.flip()
         clock.tick(60)
@@ -397,22 +433,395 @@ def draw_wind_indicator(screen, font_small, level, wind_force, wind_direction):
     
     draw_text_with_outline(screen, wind_text, font_small, 295, 20, color)
 
-def main():
+def load_leaderboard(max_entries=10):
+    """Load leaderboard scores from file, return list of dicts with username and score."""
+    leaderboard_path = os.path.join(BASE_DIR, "leaderboard.json")
+    scores = []
+    
+    if os.path.exists(leaderboard_path):
+        try:
+            with open(leaderboard_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    scores = data
+        except Exception as e:
+            print(f"Lỗi đọc leaderboard: {e}")
+            # Fallback: thử đọc file txt cũ
+            try:
+                txt_path = os.path.join(BASE_DIR, "leaderboard.txt")
+                if os.path.exists(txt_path):
+                    with open(txt_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                try:
+                                    scores.append({
+                                        "username": "Guest",
+                                        "score": int(line),
+                                        "level": 0
+                                    })
+                                except ValueError:
+                                    continue
+            except Exception:
+                pass
+    
+    # Sắp xếp theo điểm giảm dần
+    scores.sort(key=lambda x: x.get('score', 0), reverse=True)
+    return scores[:max_entries]
+
+def save_score_to_leaderboard(score, level=1, username=None, max_entries=10):
+    """Save score with username to leaderboard."""
+    leaderboard_path = os.path.join(BASE_DIR, "leaderboard.json")
+    
+    # Lấy username
+    if username is None:
+        if FIREBASE_ENABLED and firebase_auth.is_logged_in():
+            username = firebase_auth.username
+        else:
+            username = "Guest"
+    
+    # Load existing scores
+    scores = load_leaderboard(max_entries=max_entries*2)
+    
+    # Thêm score mới
+    scores.append({
+        "username": username,
+        "score": int(score),
+        "level": int(level)
+    })
+    
+    # Sắp xếp và giữ top N
+    scores.sort(key=lambda x: x.get('score', 0), reverse=True)
+    scores = scores[:max_entries]
+    
+    # Lưu file
+    try:
+        with open(leaderboard_path, "w", encoding="utf-8") as f:
+            json.dump(scores, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Lỗi lưu leaderboard: {e}")
+
+def show_leaderboard(screen, font_large, font_small, background, show_online=False, force_refresh=False):
+    """Display leaderboard and wait for user to go back."""
+    waiting = True
+    
+    # Chọn tab (local hoặc online)
+    current_tab = "online" if show_online and FIREBASE_ENABLED else "local"
+    
+    # Cache để tránh load liên tục
+    cached_local = None
+    cached_online = None
+    last_refresh = 0
+    
+    while waiting:
+        # Auto refresh mỗi 2 giây hoặc khi force_refresh
+        current_time = time.time()
+        if force_refresh or (current_time - last_refresh > 2):
+            cached_local = None
+            cached_online = None
+            last_refresh = current_time
+            force_refresh = False
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "quit"
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
+                    return "back"
+                # Tab switching
+                if FIREBASE_ENABLED:
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        current_tab = "online" if current_tab == "local" else "local"
+                        # Force refresh khi đổi tab
+                        cached_local = None
+                        cached_online = None
+                # Refresh thủ công
+                if event.key == pygame.K_r:
+                    cached_local = None
+                    cached_online = None
+
+        screen.fill((135, 206, 235))
+        screen.blit(background, (0, 0))
+
+        panel = pygame.Surface((600, 500))
+        panel.fill((30, 30, 50))
+        pygame.draw.rect(panel, (255, 215, 0), (0, 0, 600, 500), 6)
+        pygame.draw.rect(panel, (200, 170, 0), (6, 6, 588, 488), 3)
+        screen.blit(panel, (100, 50))
+
+        draw_text_with_outline(screen, "LEADERBOARD", font_large, 300, 70, (255, 255, 150))
+
+        # Tabs
+        if FIREBASE_ENABLED:
+            # Local tab
+            local_color = (100, 255, 100) if current_tab == "local" else (150, 150, 150)
+            draw_text_with_outline(screen, "Local", font_small, 180, 110, local_color)
+            
+            # Online tab
+            online_color = (100, 150, 255) if current_tab == "online" else (150, 150, 150)
+            draw_text_with_outline(screen, "Online", font_small, 550, 110, online_color)
+            
+            draw_text_with_outline(screen, "<- ->: Chuyen tab | R: Tai lai", font_small, 240, 110, (200, 200, 200))
+        else:
+            draw_text_with_outline(screen, "R: Tai lai", font_small, 340, 110, (200, 200, 200))
+        
+        # Debug info (chỉ hiển thị khi có Firebase)
+        if FIREBASE_ENABLED and current_tab == "online":
+            status_text = "Online"
+            if firebase_auth.is_logged_in():
+                status_text += f" - {firebase_auth.username}"
+            draw_text_with_outline(screen, status_text, font_small, 150, 140, (150, 150, 150))
+        
+        # Hiển thị scores
+        y = 150
+        if current_tab == "local":
+            # Load local scores với cache
+            if cached_local is None:
+                cached_local = load_leaderboard()
+            
+            scores = cached_local
+            if not scores:
+                draw_text_with_outline(screen, "Chua co diem nao", font_small, 280, y, (255, 255, 255))
+            else:
+                for idx, entry in enumerate(scores[:10], start=1):
+                    username = entry.get('username', 'Guest')
+                    score = entry.get('score', 0)
+                    level = entry.get('level', 0)
+                    
+                    # Highlight nếu là user hiện tại
+                    color = (255, 255, 100) if (FIREBASE_ENABLED and 
+                                               firebase_auth.is_logged_in() and 
+                                               username == firebase_auth.username) else (255, 255, 255)
+                    
+                    text = f"{idx}. {username}: {score} (Lv{level})"
+                    draw_text_with_outline(screen, text, font_small, 150, y, color)
+                    y += 35
+        else:
+            # Online leaderboard
+            if FIREBASE_ENABLED:
+                # Load online scores với cache
+                if cached_online is None:
+                    try:
+                        # Hiển thị loading
+                        draw_text_with_outline(screen, "Dang tai...", font_small, 320, y, (200, 200, 200))
+                        pygame.display.flip()
+                        
+                        cached_online = firebase_auth.get_leaderboard(10)
+                        if cached_online is None:
+                            cached_online = []
+                    except Exception as e:
+                        print(f"Loi load online leaderboard: {e}")
+                        cached_online = []
+                
+                leaderboard = cached_online
+                if not leaderboard or len(leaderboard) == 0:
+                    draw_text_with_outline(screen, "Chua co diem online nao", font_small, 250, y, (255, 255, 255))
+                    y += 40
+                    draw_text_with_outline(screen, "Choi de them diem!", font_small, 270, y, (150, 255, 150))
+                else:
+                    for idx, entry in enumerate(leaderboard, start=1):
+                        try:
+                            username = entry.get('username', 'Unknown')
+                            score = entry.get('score', 0)
+                            level = entry.get('level', 0)
+                            
+                            # Highlight nếu là user hiện tại
+                            color = (255, 255, 100) if (firebase_auth.is_logged_in() and 
+                                                       username == firebase_auth.username) else (255, 255, 255)
+                            
+                            text = f"{idx}. {username}: {score} (Lv{level})"
+                            draw_text_with_outline(screen, text, font_small, 150, y, color)
+                            y += 35
+                        except Exception as e:
+                            print(f"Loi hien thi entry: {e}")
+                            continue
+
+        draw_text_with_outline(screen, "ESC/ENTER de quay lai", font_small, 270, 500, (200, 200, 200))
+        pygame.display.flip()
+        clock.tick(60)
+
+def show_main_menu(screen, font_large, font_small, background):
+    """Main menu with Play, Leaderboard, Login, Quit. Returns action string."""
+    if FIREBASE_ENABLED:
+        if firebase_auth.is_logged_in():
+            options = ["Choi", "Bang xep hang", "Dang xuat", "Thoat"]
+        else:
+            options = ["Choi", "Bang xep hang", "Dang nhap", "Thoat"]
+    else:
+        options = ["Choi", "Bang xep hang", "Thoat"]
+    
+    selected = 0
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "quit"
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_UP, pygame.K_w):
+                    selected = (selected - 1) % len(options)
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    selected = (selected + 1) % len(options)
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    if FIREBASE_ENABLED:
+                        if selected == 0:
+                            return "play"
+                        elif selected == 1:
+                            return "leaderboard"
+                        elif selected == 2:
+                            if firebase_auth.is_logged_in():
+                                firebase_auth.logout()
+                                return "menu_refresh"
+                            else:
+                                return "login"
+                        else:
+                            return "quit"
+                    else:
+                        if selected == 0:
+                            return "play"
+                        elif selected == 1:
+                            return "leaderboard"
+                        else:
+                            return "quit"
+
+        screen.fill((135, 206, 235))
+        screen.blit(background, (0, 0))
+
+        title_panel = pygame.Surface((520, 120))
+        title_panel.fill((30, 30, 50))
+        pygame.draw.rect(title_panel, (100, 150, 255), (0, 0, 520, 120), 6)
+        pygame.draw.rect(title_panel, (70, 120, 200), (6, 6, 508, 108), 3)
+        screen.blit(title_panel, (140, 80))
+        draw_text_with_outline(screen, "TOWER BUILDER", font_large, 280, 115, (255, 255, 150))
+
+        menu_panel = pygame.Surface((420, 300))
+        menu_panel.fill((30, 30, 50))
+        pygame.draw.rect(menu_panel, (100, 150, 255), (0, 0, 420, 300), 6)
+        pygame.draw.rect(menu_panel, (70, 120, 200), (6, 6, 408, 288), 3)
+        screen.blit(menu_panel, (190, 240))
+
+        y = 280
+        for idx, label in enumerate(options):
+            color = (255, 255, 255)
+            if idx == selected:
+                color = (255, 255, 150)
+                pygame.draw.rect(screen, (70, 120, 200), (230, y - 6, 340, 34), 0)
+            draw_text_with_outline(screen, label, font_small, 260, y, color)
+            y += 50
+
+        # Hiển thị trạng thái đăng nhập
+        if FIREBASE_ENABLED and firebase_auth.is_logged_in():
+            draw_text_with_outline(screen, f"Xin chao: {firebase_auth.username}", font_small, 250, 210, (150, 255, 150))
+
+        draw_text_with_outline(screen, "Len/Xuong de chon, Enter de xac nhan", font_small, 210, 450, (200, 200, 200))
+        pygame.display.flip()
+        clock.tick(60)
+
+def play_game(screen, background, font_small, font_large):
+    """Run one game session. Returns action string."""
     global force, rope_length, grav, wind_force, wind_direction, wind_timer
     running = True
     tower = Tower()
     current_block_width = 250
     block = Block(tower.camera_y, tower_size=len(tower.blocks), width=current_block_width)
-    
+
     score = 0
     level = 1
     combo = 0
-    
+
     wind_force = 0
     wind_direction = 1
     wind_timer = 0
-    
-    # Khởi tạo font
+
+    adjust_difficulty(level)
+
+    while running:
+        clock.tick(60)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "quit"
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    if block.state == "swinging":
+                        block.drop(tower, current_level=level, wind_force=wind_force)
+                elif event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
+                    pause_action = pause_screen(screen, font_large, font_small, background, tower, block)
+                    if pause_action == "quit":
+                        return "menu"
+                    elif pause_action == "restart":
+                        return "restart"
+
+        if level >= 4:
+            wind_timer += 1
+            if wind_timer >= wind_change_interval:
+                wind_timer = 0
+                wind_direction *= -1
+            wind_intensity = min(level - 3, 7) * 0.3
+            wind_force = wind_direction * wind_intensity
+        else:
+            wind_force = 0
+
+        tower.update_wind(wind_force)
+
+        if block.state == "swinging":
+            block.swing(tower.camera_y)
+        elif block.state == "falling":
+            result = block.drop(tower, current_level=level, wind_force=wind_force)
+            if result is not None:
+                points = result["points"]
+                new_width = result["new_width"]
+                if points == -1:
+                    block.state = "failed"
+                    
+                    # Lưu điểm ngay khi game over
+                    save_score_to_leaderboard(score, level)
+                    if FIREBASE_ENABLED and firebase_auth.is_logged_in():
+                        firebase_auth.save_score(score, level)
+                    
+                    # Đợi 0.5s để đảm bảo Firebase lưu xong
+                    time.sleep(0.5)
+                    
+                    action = game_over_screen(screen, font_large, font_small, background, tower, block, score, level)
+                    if action == "restart":
+                        return "restart"
+                    elif action == "leaderboard":
+                        return "leaderboard"
+                    elif action == "menu":
+                        return "menu"
+                    else:
+                        return "quit"
+                else:
+                    if points >= 50:
+                        combo += 1
+                    else:
+                        combo = 0
+                    score += points * max(1, combo)
+                    current_block_width = new_width
+        elif block.state == "landed":
+            tower.add_block(block)
+            if len(tower.blocks) % 3 == 0:
+                level += 1
+                adjust_difficulty(level)
+            block = Block(tower.camera_y, tower_size=len(tower.blocks), width=current_block_width)
+
+        tower.update_camera()
+
+        screen.fill((135, 206, 235))
+        screen.blit(background, (0, 0))
+        tower.draw()
+        block.draw(tower.camera_y)
+
+        draw_instruction_panel(screen, font_small, level)
+        draw_wind_indicator(screen, font_small, level, wind_force, wind_direction)
+        draw_scoreboard(screen, font_large, font_small, score, level, combo)
+
+        pygame.display.flip()
+
+    return "menu"
+
+def main():
+    global force, rope_length, grav, wind_force, wind_direction, wind_timer
+    # Khởi tạo font... (giữ nguyên code cũ)
     font_small = None
     font_large = None
     font_names = ["Segoe UI", "Arial Unicode MS", "Microsoft Sans Serif", "Tahoma", "Verdana"]
@@ -430,108 +839,48 @@ def main():
         font_small = pygame.font.Font(None, 28)
         font_large = pygame.font.Font(None, 36)
     
-    # Khởi tạo độ khó ban đầu
-    adjust_difficulty(level)
-    
-    while running:
-        clock.tick(60)
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    if block.state == "swinging":
-                        block.drop(tower, current_level=level, wind_force=wind_force)
+    # Vòng lặp menu chính
+    app_running = True
+    while app_running:
+        action = show_main_menu(screen, font_large, font_small, background)
+        if action == "quit":
+            break
+        elif action == "menu_refresh":
+            continue
+        elif action == "login":
+            if FIREBASE_ENABLED:
+                login_result = show_login_screen(screen, background, font_small, font_large, firebase_auth)
+                if login_result == "quit":
+                    break
+            continue
+        elif action == "leaderboard":
+            show_online = FIREBASE_ENABLED and firebase_auth.is_logged_in()
+            lb_action = show_leaderboard(screen, font_large, font_small, background, 
+                                        show_online=show_online, force_refresh=True)
+            if lb_action == "quit":
+                break
+            continue
+        elif action == "play":
+            while True:
+                game_action = play_game(screen, background, font_small, font_large)
                 
-                elif event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
-                    pause_action = pause_screen(screen, font_large, font_small, background, tower, block)
-                    if pause_action == "quit":
-                        running = False
-                        continue
-                    elif pause_action == "restart":
-                        tower = Tower()
-                        current_block_width = 250
-                        block = Block(tower.camera_y, tower_size=len(tower.blocks), width=current_block_width)
-                        score = 0
-                        level = 1
-                        combo = 0
-                        wind_force = 0
-                        wind_direction = 1
-                        wind_timer = 0
-                        adjust_difficulty(level)
-
-        # Cập nhật gió (bắt đầu từ level 4)
-        if level >= 4:
-            wind_timer += 1
-            if wind_timer >= wind_change_interval:
-                wind_timer = 0
-                wind_direction *= -1
-            
-            wind_intensity = min(level - 3, 7) * 0.3
-            wind_force = wind_direction * wind_intensity
-        else:
-            wind_force = 0
-        
-        tower.update_wind(wind_force)
-
-        # Cập nhật
-        if block.state == "swinging":
-            block.swing(tower.camera_y)
-        elif block.state == "falling":
-            result = block.drop(tower, current_level=level, wind_force=wind_force)
-            if result is not None:
-                points = result["points"]
-                new_width = result["new_width"]
-                
-                if points == -1:
-                    block.state = "failed"
-                    restart = game_over_screen(screen, font_large, font_small, background, tower, block, score, level)
-                    if restart:
-                        tower = Tower()
-                        current_block_width = 250
-                        block = Block(tower.camera_y, tower_size=len(tower.blocks), width=current_block_width)
-                        score = 0
-                        level = 1
-                        combo = 0
-                        wind_force = 0
-                        wind_direction = 1
-                        wind_timer = 0
-                        adjust_difficulty(level)
-                    else:
-                        running = False
-                        continue
-                else:
-                    if points >= 50:
-                        combo += 1
-                    else:
-                        combo = 0
-                    score += points * max(1, combo)
-                    current_block_width = new_width
-        elif block.state == "landed":
-            tower.add_block(block)
-            
-            if len(tower.blocks) % 3 == 0:
-                level += 1
-                adjust_difficulty(level)
-            
-            block = Block(tower.camera_y, tower_size=len(tower.blocks), width=current_block_width)
-            
-        tower.update_camera()
-
-        # Vẽ
-        screen.fill((135, 206, 235))
-        screen.blit(background, (0, 0))
-        tower.draw()
-        block.draw(tower.camera_y)
-        
-        # Vẽ các panel UI
-        draw_instruction_panel(screen, font_small, level)
-        draw_wind_indicator(screen, font_small, level, wind_force, wind_direction)
-        draw_scoreboard(screen, font_large, font_small, score, level, combo)
-
-        pygame.display.flip()
+                if game_action == "quit":
+                    app_running = False
+                    break
+                elif game_action == "restart":
+                    continue  # Chơi lại
+                elif game_action == "leaderboard":
+                    # Hiển thị leaderboard với force_refresh
+                    show_online = FIREBASE_ENABLED and firebase_auth.is_logged_in()
+                    lb_action = show_leaderboard(screen, font_large, font_small, background, 
+                                                show_online=show_online, force_refresh=True)
+                    if lb_action == "quit":
+                        app_running = False
+                        break
+                    # Sau khi xem xong leaderboard, quay lại menu
+                    break
+                else:  # menu
+                    break
 
     pygame.quit()
 
