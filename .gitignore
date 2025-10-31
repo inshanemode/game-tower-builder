@@ -1,2 +1,2 @@
-towerbuilder/firebase_config.py
+# towerbuilder/firebase_config.py  # Commented out - firebase_config.py sẽ được commit để người dùng dùng chung Firebase
 .env

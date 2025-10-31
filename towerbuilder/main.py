@@ -1007,7 +1007,7 @@ def draw_instruction_panel(screen, font_small, level):
 
    
 
-    if level >= 4:
+    if level >= 7:
 
         draw_text_with_outline(screen, "Can than voi gio!", font_small, 35, 85, (150, 200, 255))
 
@@ -1021,7 +1021,7 @@ def draw_wind_indicator(screen, font_small, level, wind_force, wind_direction):
 
     """Vẽ chỉ báo gió vuông"""
 
-    if level < 4:
+    if level < 7:
 
         return
 
@@ -1703,35 +1703,53 @@ def play_game(screen, font_small, font_large):
 
 
 
-        if level >= 4:
+        if level >= 7:
 
-            # Tính wind_change_interval giảm dần theo level (gió đổi chiều nhanh hơn khi level cao)
-
-            # Level 4: 180 frames (~3s), Level 10: 90 frames (~1.5s), Level 15+: 60 frames (~1s)
-
-            base_interval = 180
-
-            interval_reduction = (level - 4) * 10  # Giảm 10 frames mỗi level
-
-            wind_change_interval = max(60, base_interval - interval_reduction)  # Tối thiểu 60 frames
-
-            
+            # Cập nhật timer gió
 
             wind_timer += 1
 
+
+
+            # Nếu đến lúc đổi gió (hoặc lần đầu)
+
             if wind_timer >= wind_change_interval:
 
-                wind_timer = 0
+                # Đặt lại timer với khoảng thời gian ngẫu nhiên (1–4 giây ở 60 FPS → 60–240 frame)
 
-                wind_direction *= -1
+                wind_change_interval = random.randint(60, 240)
 
-            wind_intensity = min(level - 3, 7) * 0.3
 
-            wind_force = wind_direction * wind_intensity
+
+                # Chọn hướng ngẫu nhiên (-1 hoặc 1)
+
+                wind_direction = random.choice([-1, 1])
+
+
+
+                # Cường độ gió: tăng theo level, nhưng ngẫu nhiên trong khoảng
+
+                base_intensity = max(1, level - 6)  # Bắt đầu từ level 7 → base = 1
+
+                intensity_variation = random.uniform(0.7, 1.3)  # ±30%
+
+                wind_intensity = base_intensity * intensity_variation * 0.3  # scale như cũ
+
+
+
+                wind_force = wind_direction * wind_intensity
+
+                wind_timer = 0  # reset timer
+
+
 
         else:
 
             wind_force = 0
+
+            wind_timer = 0
+
+            wind_change_interval = 180  # reset mặc định
 
 
 
