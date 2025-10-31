@@ -15,6 +15,13 @@ except ImportError:
     FIREBASE_ENABLED = False
     print("Firebase chưa được cấu hình. Chỉ dùng leaderboard local.")
 
+current_lang = "vi"  # hoặc "en"
+
+LANGUAGES = {
+    "vi": { ... },
+    "en": { ... }
+}
+
 # === CẤU HÌNH MỚI: 600x800 ===
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 800
@@ -24,6 +31,145 @@ SCROLL_THRESHOLD = int(0.625 * SCREEN_HEIGHT)  # ~500
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Tower Building Game")
+
+# === HỖ TRỢ ĐA NGÔN NGỮ ===
+current_lang = "vi"  # Mặc định là tiếng Việt
+
+LANGUAGES = {
+    "vi": {
+        "game_title": "TOWER BUILDER",
+        "info": "THÔNG TIN",
+        "level": "Level",
+        "score": "Điểm",
+        "difficulty": "Độ khó",
+        "difficulty_max": "MAX+{n}",
+        "combo": "x{combo} COMBO!",
+        "pause": "TAM DUNG",
+        "resume": "P/ESC - Tiep tuc",
+        "restart": "R - Choi lai",
+        "quit_game": "Q - Thoat game",
+        "press_key": "Nhan phim de lua chon...",
+        "game_over": "GAME OVER!",
+        "final_score": "Điểm cuối",
+        "level_reached": "Level đạt",
+        "saved_online": "ĐIỂM ĐÃ LƯU ONLINE!",
+        "saved_local": "ĐIỂM ĐÃ LƯU LOCAL!",
+        "play_again": "R - CHƠI LẠI",
+        "view_leaderboard": "L - XEM BẢNG XẾP HẠNG",
+        "back_menu": "ESC - VỀ MENU",
+        "space_drop": "SPACE - Thả khối",
+        "pause_key": "P/ESC - Tạm dừng",
+        "perfect_tip": "Perfect = bonus!",
+        "wind_light": "Gió: NHẸ ",
+        "wind_strong": "Gió: MẠNH ",
+        "leaderboard_title": "LEADERBOARD",
+        "no_scores": "Chua co diem nao",
+        "no_online_scores": "CHƯA CÓ ĐIỂM ONLINE NÀO",
+        "play_to_add": "CHƠI ĐỂ THÊM ĐIỂM!",
+        "loading": "ĐANG TẢI...",
+        "local_tab": "Local",
+        "online_tab": "Online",
+        "switch_tab": "<- ->: Chuyen tab | R: Tai lai",
+        "reload": "R: Tai lai",
+        "logged_in_as": "Xin chao: {name}",
+        "menu_play": "CHƠI",
+        "menu_leaderboard": "BẢNG XẾP HẠNG",
+        "menu_login": "ĐĂNG NHẬP",
+        "menu_logout": "ĐĂNG XUẤT",
+        "menu_quit": "THOÁT",
+        "menu_language": "NGÔN NGỮ / LANGUAGE",
+        "menu_nav": "Len/Xuong de chon, Enter de xac nhan",
+        "level3_wind": "Level 3: GIÓ NHẸ",
+        "level5_wind_strong": "Level 5: GIÓ MẠNH !",
+        "level7_shrink": "Level 7: CẮT KHỐI KHI ĐẶT LỆCH!",
+        # Login screen translations
+        "login_title": "ĐĂNG NHẬP",
+        "register_title": "ĐĂNG KÝ",
+        "email_label": "Email:",
+        "password_label": "Mật khẩu:",
+        "username_label": "Tên người dùng:",
+        "login_button": "ĐĂNG NHẬP",
+        "register_button": "ĐĂNG KÝ",
+        "switch_to_register": "Chưa có tài khoản? Đăng ký ngay",
+        "switch_to_login": "Đã có tài khoản? Đăng nhập",
+        "login_missing_info": "Vui lòng nhập email và mật khẩu!",
+        "register_missing_info": "Vui lòng nhập đầy đủ thông tin!",
+        "back_instruction": "ESC - Quay lại",
+    },
+    "en": {
+        "game_title": "TOWER BUILDER",
+        "info": "INFO",
+        "level": "Level",
+        "score": "Score",
+        "difficulty": "Difficulty",
+        "difficulty_max": "MAX+{n}",
+        "combo": "x{combo} COMBO!",
+        "pause": "PAUSED",
+        "resume": "P/ESC - Resume",
+        "restart": "R - Restart",
+        "quit_game": "Q - Quit Game",
+        "press_key": "Press a key to choose...",
+        "game_over": "GAME OVER!",
+        "final_score": "Final Score",
+        "level_reached": "Level Reached",
+        "saved_online": "SCORE SAVED ONLINE!",
+        "saved_local": "SCORE SAVED LOCALLY!",
+        "play_again": "R - PLAY AGAIN",
+        "view_leaderboard": "L - VIEW LEADERBOARD",
+        "back_menu": "ESC - MAIN MENU",
+        "space_drop": "SPACE - Drop Block",
+        "pause_key": "P/ESC - Pause",
+        "perfect_tip": "Perfect = bonus!",
+        "wind_light": "Wind: LIGHT ",
+        "wind_strong": "Wind: STRONG ",
+        "leaderboard_title": "LEADERBOARD",
+        "no_scores": "No scores yet",
+        "no_online_scores": "NO ONLINE SCORES YET",
+        "play_to_add": "PLAY TO ADD SCORE!",
+        "loading": "LOADING...",
+        "local_tab": "Local",
+        "online_tab": "Online",
+        "switch_tab": "<- ->: Switch tab | R: Reload",
+        "reload": "R: Reload",
+        "logged_in_as": "Hello: {name}",
+        "menu_play": "PLAY",
+        "menu_leaderboard": "LEADERBOARD",
+        "menu_login": "LOGIN",
+        "menu_logout": "LOGOUT",
+        "menu_quit": "QUIT",
+        "menu_language": "LANGUAGE / NGÔN NGỮ",
+        "menu_nav": "Up/Down to select, Enter to confirm",
+        "level3_wind": "Level 3: LIGHT WIND",
+        "level5_wind_strong": "Level 5: STRONG WIND!",
+        "level7_shrink": "Level 7: BLOCK SHRINKS ON MISALIGN!",
+        # Login screen translations
+        "login_title": "LOGIN",
+        "register_title": "REGISTER",
+        "email_label": "Email:",
+        "password_label": "Password:",
+        "username_label": "Username:",
+        "login_button": "LOGIN",
+        "register_button": "REGISTER",
+        "switch_to_register": "Don't have an account? Register now",
+        "switch_to_login": "Already have an account? Login",
+        "login_missing_info": "Please enter email and password!",
+        "register_missing_info": "Please fill in all information!",
+        "back_instruction": "ESC - Go back",
+    }
+}
+
+def set_language(lang):
+    global current_lang
+    if lang in LANGUAGES:
+        current_lang = lang
+
+def _(key, **kwargs):
+    """Hàm dịch: _() giống như i18n.t()"""
+    text = LANGUAGES[current_lang].get(key, key)
+    try:
+        return text.format(**kwargs)
+    except:
+        return text
 
 # Tải hình nền
 BASE_DIR = os.path.dirname(__file__)
@@ -187,7 +333,6 @@ class Block(pygame.sprite.Sprite):
                         self.image = pygame.transform.scale(original_image, (self.width, self.height))
                     else:
                         points = 25
-                        # === CẮT KHỐI CHỈ TỪ LEVEL 7 ===
                         if current_level >= 7:
                             SHRINK_AMOUNT = 20
                             new_width = max(self.width - SHRINK_AMOUNT, MIN_WIDTH)
@@ -286,19 +431,19 @@ def draw_scoreboard(screen, font_large, font_small, score, level, combo):
     scoreboard_x = SCREEN_WIDTH - 210
     scoreboard_y = 10
     screen.blit(board_surface, (scoreboard_x, scoreboard_y))
-    draw_text_with_outline(screen, "THÔNG TIN", font_large, scoreboard_x + 10, scoreboard_y + 10, (255, 255, 100))
+    draw_text_with_outline(screen, _( "info"), font_large, scoreboard_x + 10, scoreboard_y + 10, (255, 255, 100))
     y_offset = scoreboard_y + 50
-    draw_text_with_outline(screen, f"Level: {level}", font_small, scoreboard_x + 15, y_offset, (150, 200, 255))
+    draw_text_with_outline(screen, f"{_( 'level')}: {level}", font_small, scoreboard_x + 15, y_offset, (150, 200, 255))
     y_offset += 25
-    draw_text_with_outline(screen, f"Điểm: {score}", font_small, scoreboard_x + 15, y_offset, (255, 255, 100))
+    draw_text_with_outline(screen, f"{_( 'score')}: {score}", font_small, scoreboard_x + 15, y_offset, (255, 255, 100))
     y_offset += 25
     if level <= 10:
-        draw_text_with_outline(screen, f"Độ khó: {level}/10", font_small, scoreboard_x + 15, y_offset, (255, 150, 255))
+        draw_text_with_outline(screen, f"{_( 'difficulty')}: {level}/10", font_small, scoreboard_x + 15, y_offset, (255, 150, 255))
     else:
-        draw_text_with_outline(screen, f"Độ khó: MAX+{level-10}", font_small, scoreboard_x + 15, y_offset, (255, 100, 100))
+        draw_text_with_outline(screen, _( "difficulty_max", n=level-10), font_small, scoreboard_x + 15, y_offset, (255, 100, 100))
     y_offset += 25
     if combo > 1:
-        draw_text_with_outline(screen, f"x{combo} COMBO!", font_small, scoreboard_x + 15, y_offset, (255, 100, 100))
+        draw_text_with_outline(screen, _( "combo", combo=combo), font_small, scoreboard_x + 15, y_offset, (255, 100, 100))
 
 def adjust_difficulty(level):
     global force, rope_length, grav
@@ -345,15 +490,15 @@ def pause_screen(screen, font_large, font_small, tower, block):
         pygame.draw.rect(pause_surface, (100, 150, 255), (0, 0, menu_width, menu_height), 4)
         pygame.draw.rect(pause_surface, (70, 120, 200), (4, 4, menu_width-8, menu_height-8), 2)
         screen.blit(pause_surface, (menu_x, menu_y))
-        draw_text_with_outline(screen, "TAM DUNG", font_large, menu_x + 80, menu_y + 20, (255, 255, 150))
+        draw_text_with_outline(screen, _( "pause"), font_large, menu_x + 80, menu_y + 20, (255, 255, 150))
         y = menu_y + 80
-        draw_text_with_outline(screen, "P/ESC - Tiep tuc", font_small, menu_x + 60, y, (255, 255, 255))
+        draw_text_with_outline(screen, _( "resume"), font_small, menu_x + 60, y, (255, 255, 255))
         y += 35
-        draw_text_with_outline(screen, "R - Choi lai", font_small, menu_x + 60, y, (150, 255, 150))
+        draw_text_with_outline(screen, _( "restart"), font_small, menu_x + 60, y, (150, 255, 150))
         y += 35
-        draw_text_with_outline(screen, "Q - Thoat game", font_small, menu_x + 60, y, (255, 150, 150))
+        draw_text_with_outline(screen, _( "quit_game"), font_small, menu_x + 60, y, (255, 150, 150))
         y += 50
-        draw_text_with_outline(screen, "Nhan phim de lua chon...", font_small, menu_x + 40, y, (200, 200, 200))
+        draw_text_with_outline(screen, _( "press_key"), font_small, menu_x + 40, y, (200, 200, 200))
         pygame.display.flip()
         clock.tick(30)
 
@@ -383,22 +528,22 @@ def game_over_screen(screen, font_large, font_small, tower, block, score, level)
         pygame.draw.rect(go_surface, (255, 80, 80), (0, 0, menu_width, menu_height), 4)
         pygame.draw.rect(go_surface, (200, 50, 50), (4, 4, menu_width-8, menu_height-8), 2)
         screen.blit(go_surface, (menu_x, menu_y))
-        draw_text_with_outline(screen, "GAME OVER!", font_large, menu_x + 70, menu_y + 20, (255, 100, 100))
+        draw_text_with_outline(screen, _( "game_over"), font_large, menu_x + 70, menu_y + 20, (255, 100, 100))
         y = menu_y + 80
-        draw_text_with_outline(screen, f"Điểm cuối: {score}", font_small, menu_x + 80, y, (255, 255, 100))
+        draw_text_with_outline(screen, f"{_( 'final_score')}: {score}", font_small, menu_x + 80, y, (255, 255, 100))
         y += 45
-        draw_text_with_outline(screen, f"Level đạt: {level}", font_small, menu_x + 80, y, (150, 200, 255))
+        draw_text_with_outline(screen, f"{_( 'level_reached')}: {level}", font_small, menu_x + 80, y, (150, 200, 255))
         y += 55
         if FIREBASE_ENABLED and firebase_auth.is_logged_in():
-            draw_text_with_outline(screen, "ĐIỂM ĐÃ LƯU ONLINE!", font_small, menu_x + 60, y, (150, 255, 150))
+            draw_text_with_outline(screen, _( "saved_online"), font_small, menu_x + 60, y, (150, 255, 150))
         else:
-            draw_text_with_outline(screen, "ĐIỂM ĐÃ LƯU LOCAL!", font_small, menu_x + 65, y, (200, 200, 255))
+            draw_text_with_outline(screen, _( "saved_local"), font_small, menu_x + 65, y, (200, 200, 255))
         y += 55
-        draw_text_with_outline(screen, "R - CHƠI LẠI", font_small, menu_x + 80, y, (255, 255, 150))
+        draw_text_with_outline(screen, _( "play_again"), font_small, menu_x + 80, y, (255, 255, 150))
         y += 40
-        draw_text_with_outline(screen, "L - XEM BẢNG XẾP HẠNG", font_small, menu_x + 30, y, (255, 200, 100))
+        draw_text_with_outline(screen, _( "view_leaderboard"), font_small, menu_x + 30, y, (255, 200, 100))
         y += 40
-        draw_text_with_outline(screen, "ESC - VỀ MENU", font_small, menu_x + 80, y, (255, 200, 200))
+        draw_text_with_outline(screen, _( "back_menu"), font_small, menu_x + 80, y, (255, 200, 200))
         pygame.display.flip()
         clock.tick(60)
 
@@ -407,32 +552,26 @@ def draw_instruction_panel(screen, font_small, level):
     panel_surface.fill((50, 50, 90))
     pygame.draw.rect(panel_surface, (100, 200, 255), (0, 0, 190, 100), 2)
     screen.blit(panel_surface, (10, 10))
-    draw_text_with_outline(screen, "SPACE - Thả khối", font_small, 20, 25, (255, 255, 255))
-    draw_text_with_outline(screen, "P/ESC - Tạm dừng", font_small, 20, 50, (200, 200, 255))
+    draw_text_with_outline(screen, _( "space_drop"), font_small, 20, 25, (255, 255, 255))
+    draw_text_with_outline(screen, _( "pause_key"), font_small, 20, 50, (200, 200, 255))
     if level >= 3:
         draw_text_with_outline(screen, "", font_small, 20, 75, (150, 200, 255))
     else:
-        draw_text_with_outline(screen, "Perfect = bonus!", font_small, 20, 75, (255, 255, 100))
+        draw_text_with_outline(screen, _( "perfect_tip"), font_small, 20, 75, (255, 255, 100))
 
 def draw_wind_indicator(screen, font_small, level, wind_force, wind_direction):
-    """Hiển thị từ level 3"""
     if level < 3:
         return
     panel_surface = pygame.Surface((160, 50))
     panel_surface.fill((60, 100, 180))
     pygame.draw.rect(panel_surface, (100, 150, 255), (0, 0, 160, 50), 2)
     screen.blit(panel_surface, (10, 120))
-    wind_text = "Gió: "
-    if level >= 5:
-        wind_text += "MẠNH "
-        color = (255, 100, 100)
-    else:
-        wind_text += "NHẸ "
-        color = (255, 255, 150)
+    wind_text = _( "wind_strong") if level >= 5 else _( "wind_light")
     if wind_direction > 0:
         wind_text += "-->"
     else:
         wind_text += "<--"
+    color = (255, 100, 100) if level >= 5 else (255, 255, 150)
     draw_text_with_outline(screen, wind_text, font_small, 22, 135, color)
 
 def load_leaderboard(max_entries=10):
@@ -517,16 +656,16 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
         pygame.draw.rect(panel, (255, 215, 0), (0, 0, lb_width, lb_height), 6)
         pygame.draw.rect(panel, (200, 170, 0), (6, 6, lb_width-12, lb_height-12), 3)
         screen.blit(panel, (lb_x, lb_y))
-        draw_text_with_outline(screen, "LEADERBOARD", font_large, lb_x + 180, lb_y + 20, (255, 255, 150))
+        draw_text_with_outline(screen, _( "leaderboard_title"), font_large, lb_x + 180, lb_y + 20, (255, 255, 150))
         tab_y = lb_y + 60
         if FIREBASE_ENABLED:
             local_color = (100, 255, 100) if current_tab == "local" else (150, 150, 150)
-            draw_text_with_outline(screen, "Local", font_small, lb_x + 50, tab_y, local_color)
+            draw_text_with_outline(screen, _( "local_tab"), font_small, lb_x + 50, tab_y, local_color)
             online_color = (100, 150, 255) if current_tab == "online" else (150, 150, 150)
-            draw_text_with_outline(screen, "Online", font_small, lb_x + 440, tab_y, online_color)
-            draw_text_with_outline(screen, "<- ->: Chuyen tab | R: Tai lai", font_small, lb_x + 130, tab_y, (200, 200, 200))
+            draw_text_with_outline(screen, _( "online_tab"), font_small, lb_x + 440, tab_y, online_color)
+            draw_text_with_outline(screen, _( "switch_tab"), font_small, lb_x + 130, tab_y, (200, 200, 200))
         else:
-            draw_text_with_outline(screen, "R: Tai lai", font_small, lb_x + 220, tab_y, (200, 200, 200))
+            draw_text_with_outline(screen, _( "reload"), font_small, lb_x + 220, tab_y, (200, 200, 200))
         if FIREBASE_ENABLED and current_tab == "online":
             status_text = "Online"
             if firebase_auth.is_logged_in():
@@ -538,7 +677,7 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
                 cached_local = load_leaderboard()
             scores = cached_local
             if not scores:
-                draw_text_with_outline(screen, "Chua co diem nao", font_small, lb_x + 180, y, (255, 255, 255))
+                draw_text_with_outline(screen, _( "no_scores"), font_small, lb_x + 180, y, (255, 255, 255))
             else:
                 for idx, entry in enumerate(scores[:10], start=1):
                     username = entry.get('username', 'Guest')
@@ -551,14 +690,14 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
         else:
             if FIREBASE_ENABLED:
                 if cached_online is None:
-                    draw_text_with_outline(screen, "ĐANG TẢI...", font_small, lb_x + 220, y, (200, 200, 200))
+                    draw_text_with_outline(screen, _( "loading"), font_small, lb_x + 220, y, (200, 200, 200))
                     pygame.display.flip()
                     cached_online = firebase_auth.get_leaderboard(10) or []
                 leaderboard = cached_online
                 if not leaderboard:
-                    draw_text_with_outline(screen, "CHƯA CÓ ĐIỂM ONLINE NÀO", font_small, lb_x + 160, y, (255, 255, 255))
+                    draw_text_with_outline(screen, _( "no_online_scores"), font_small, lb_x + 160, y, (255, 255, 255))
                     y += 40
-                    draw_text_with_outline(screen, "CHƠI ĐỂ THÊM ĐIỂM!", font_small, lb_x + 180, y, (150, 255, 150))
+                    draw_text_with_outline(screen, _( "play_to_add"), font_small, lb_x + 180, y, (150, 255, 150))
                 else:
                     for idx, entry in enumerate(leaderboard, start=1):
                         try:
@@ -572,18 +711,35 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
                         except Exception as e:
                             print(f"Loi hien thi entry: {e}")
                             continue
-        draw_text_with_outline(screen, "ESC/ENTER de quay lai", font_small, lb_x + 150, lb_y + lb_height - 35, (200, 200, 200))
+        draw_text_with_outline(screen, "ESC/ENTER to return", font_small, lb_x + 150, lb_y + lb_height - 35, (200, 200, 200))
         pygame.display.flip()
         clock.tick(60)
 
 def show_main_menu(screen, font_large, font_small):
     if FIREBASE_ENABLED:
         if firebase_auth.is_logged_in():
-            options = ["CHƠI", "BẢNG XẾP HẠNG", "ĐĂNG XUẤT", "THOÁT"]
+            options = [
+                _( "menu_play"),
+                _( "menu_leaderboard"),
+                _( "menu_logout"),
+                _( "menu_language"),
+                _( "menu_quit")
+            ]
         else:
-            options = ["CHƠI", "BẢNG XẾP HẠNG", "ĐĂNG NHẬP", "THOÁT"]
+            options = [
+                _( "menu_play"),
+                _( "menu_leaderboard"),
+                _( "menu_login"),
+                _( "menu_language"),
+                _( "menu_quit")
+            ]
     else:
-        options = ["CHƠI", "BẢNG XẾP HẠNG", "THOÁT"]
+        options = [
+            _( "menu_play"),
+            _( "menu_leaderboard"),
+            _( "menu_language"),
+            _( "menu_quit")
+        ]
     selected = 0
     while True:
         for event in pygame.event.get():
@@ -595,7 +751,11 @@ def show_main_menu(screen, font_large, font_small):
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
                     selected = (selected + 1) % len(options)
                 elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    if FIREBASE_ENABLED:
+                    if selected == len(options) - 2:  # LANGUAGE option
+                        # Chuyển ngôn ngữ
+                        set_language("en" if current_lang == "vi" else "vi")
+                        return "menu_refresh"
+                    elif FIREBASE_ENABLED:
                         if selected == 0: return "play"
                         elif selected == 1: return "leaderboard"
                         elif selected == 2:
@@ -604,18 +764,18 @@ def show_main_menu(screen, font_large, font_small):
                                 return "menu_refresh"
                             else:
                                 return "login"
-                        else: return "quit"
+                        elif selected == len(options) - 1: return "quit"
                     else:
                         if selected == 0: return "play"
                         elif selected == 1: return "leaderboard"
-                        else: return "quit"
+                        elif selected == len(options) - 1: return "quit"
         screen.fill((135, 206, 235))
         screen.blit(background1, (0, 0))
         title_panel = pygame.Surface((480, 120))
         title_panel.fill((30, 30, 50))
         pygame.draw.rect(title_panel, (100, 150, 255), (0, 0, 480, 120), 4)
         screen.blit(title_panel, (60, 150))
-        draw_text_with_outline(screen, "TOWER BUILDER", font_large, 130, 180, (255, 255, 150))
+        draw_text_with_outline(screen, _( "game_title"), font_large, 130, 180, (255, 255, 150))
         menu_panel = pygame.Surface((400, 320))
         menu_panel.fill((30, 30, 50))
         pygame.draw.rect(menu_panel, (100, 150, 255), (0, 0, 400, 320), 4)
@@ -626,8 +786,8 @@ def show_main_menu(screen, font_large, font_small):
             draw_text_with_outline(screen, label, font_small, 160, y, color)
             y += 50
         if FIREBASE_ENABLED and firebase_auth.is_logged_in():
-            draw_text_with_outline(screen, f"Xin chao: {firebase_auth.username}", font_small, 120, 250, (150, 255, 150))
-        draw_text_with_outline(screen, "Len/Xuong de chon, Enter de xac nhan", font_small, 110, 620, (200, 200, 200))
+            draw_text_with_outline(screen, _( "logged_in_as", name=firebase_auth.username), font_small, 120, 250, (150, 255, 150))
+        draw_text_with_outline(screen, _( "menu_nav"), font_small, 110, 620, (200, 200, 200))
         pygame.display.flip()
         clock.tick(60)
 
@@ -662,7 +822,6 @@ def play_game(screen, font_small, font_large):
                         return "menu"
                     elif pause_action == "restart":
                         return "restart"
-        # === CƠ CHẾ GIÓ THEO LEVEL ===
         if level >= 5:
             wind_timer += 1
             if wind_timer >= 120:
@@ -717,13 +876,13 @@ def play_game(screen, font_small, font_large):
                 level += 1
                 adjust_difficulty(level)
                 if level == 3:
-                    level_up_message = "Level 3: GIÓ NHẸ"
+                    level_up_message = _( "level3_wind")
                     level_up_timer = 120
                 elif level == 5:
-                    level_up_message = "Level 5: GIÓ MẠNH !"
+                    level_up_message = _( "level5_wind_strong")
                     level_up_timer = 150
                 elif level == 7:
-                    level_up_message = "Level 7: CẮT KHỐI KHI ĐẶT LỆCH!"
+                    level_up_message = _( "level7_shrink")
                     level_up_timer = 150
             block = Block(tower.camera_y, tower_size=len(tower.blocks), width=current_block_width)
 
@@ -779,7 +938,10 @@ def main():
             continue
         elif action == "login":
             if FIREBASE_ENABLED:
-                login_result = show_login_screen(screen, background1, font_small, font_large, firebase_auth)
+                login_result = show_login_screen(
+    screen, background1, font_small, font_large,
+    firebase_auth, LANGUAGES, current_lang  # ← Đảm bảo đây là dictionary và string hợp lệ
+)
                 if login_result == "quit":
                     break
             continue
