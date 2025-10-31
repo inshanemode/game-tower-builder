@@ -44,11 +44,11 @@ LANGUAGES = {
         "difficulty": "Độ khó",
         "difficulty_max": "MAX+{n}",
         "combo": "x{combo} COMBO!",
-        "pause": "TAM DUNG",
-        "resume": "P/ESC - Tiep tuc",
-        "restart": "R - Choi lai",
-        "quit_game": "Q - Thoat game",
-        "press_key": "Nhan phim de lua chon...",
+        "pause": "TẠM DỪNG",
+        "resume": "P/ESC - Tiếp tục",
+        "restart": "R - Chơi lại",
+        "quit_game": "Q - Thoát game",
+        "press_key": "Nhấn phím để lựa chọn...",
         "game_over": "GAME OVER!",
         "final_score": "Điểm cuối",
         "level_reached": "Level đạt",
@@ -62,23 +62,23 @@ LANGUAGES = {
         "perfect_tip": "Perfect = bonus!",
         "wind_light": "Gió: NHẸ ",
         "wind_strong": "Gió: MẠNH ",
-        "leaderboard_title": "LEADERBOARD",
-        "no_scores": "Chua co diem nao",
+        "leaderboard_title": "BẢNG XẾP HẠNG",
+        "no_scores": "Chưa có điểm nào",
         "no_online_scores": "CHƯA CÓ ĐIỂM ONLINE NÀO",
         "play_to_add": "CHƠI ĐỂ THÊM ĐIỂM!",
         "loading": "ĐANG TẢI...",
         "local_tab": "Local",
         "online_tab": "Online",
-        "switch_tab": "<- ->: Chuyen tab | R: Tai lai",
-        "reload": "R: Tai lai",
-        "logged_in_as": "Xin chao: {name}",
+        "switch_tab": "<- ->: Chuyển tab | R: Tải lại",
+        "reload": "R: Tải lại",
+        "logged_in_as": "Xin chào: {name}",
         "menu_play": "CHƠI",
         "menu_leaderboard": "BẢNG XẾP HẠNG",
         "menu_login": "ĐĂNG NHẬP",
         "menu_logout": "ĐĂNG XUẤT",
         "menu_quit": "THOÁT",
         "menu_language": "NGÔN NGỮ / LANGUAGE",
-        "menu_nav": "Len/Xuong de chon, Enter de xac nhan",
+        "menu_nav": "Lên/Xuống để chọn, Enter để xác nhận",
         "level3_wind": "Level 3: GIÓ NHẸ",
         "level5_wind_strong": "Level 5: GIÓ MẠNH !",
         "level7_shrink": "Level 7: CẮT KHỐI KHI ĐẶT LỆCH!",
@@ -216,6 +216,19 @@ try:
 except Exception as e:
     print(f"⚠ Không tải được âm thanh perfect: {e}")
 
+# Load icon volume
+volume_icon = None
+try:
+    volume_icon_path = os.path.join(BASE_DIR, "assets", "volume.png")
+    volume_icon = pygame.image.load(volume_icon_path)
+    volume_icon = pygame.transform.scale(volume_icon, (50, 50))
+    print("✓ Đã tải icon volume")
+except Exception as e:
+    print(f"⚠ Không tải được icon volume: {e}")
+
+# Trạng thái âm lượng
+music_enabled = True
+
 # Thiết lập game
 grav = 0.5
 rope_length = 280
@@ -260,6 +273,42 @@ def draw_text_with_outline(surface, text, font, x, y, color, outline_color=(0, 0
                 surface.blit(outline_surface, (x + dx, y + dy))
     text_surface = font.render(text, True, color)
     surface.blit(text_surface, (x, y))
+
+def toggle_music():
+    """Bật/tắt nhạc"""
+    global music_enabled
+    music_enabled = not music_enabled
+    if music_enabled:
+        pygame.mixer.music.set_volume(0.3)
+        if perfect_sound:
+            perfect_sound.set_volume(0.1)
+    else:
+        pygame.mixer.music.set_volume(0)
+        if perfect_sound:
+            perfect_sound.set_volume(0)
+
+def draw_volume_button(screen):
+    """Vẽ button volume ở góc trái dưới"""
+    volume_x = 20
+    volume_y = SCREEN_HEIGHT - 70
+    
+    # Vẽ icon (không có khung)
+    if volume_icon:
+        screen.blit(volume_icon, (volume_x, volume_y))
+    
+    # Vẽ dấu X nếu tắt âm
+    if not music_enabled:
+        pygame.draw.line(screen, (255, 50, 50), (volume_x + 5, volume_y + 5), (volume_x + 45, volume_y + 45), 5)
+        pygame.draw.line(screen, (255, 50, 50), (volume_x + 45, volume_y + 5), (volume_x + 5, volume_y + 45), 5)
+    
+    return pygame.Rect(volume_x, volume_y, 50, 50)
+
+def check_volume_button_click(mouse_pos):
+    """Kiểm tra click vào button volume"""
+    volume_x = 20
+    volume_y = SCREEN_HEIGHT - 70
+    volume_rect = pygame.Rect(volume_x, volume_y, 50, 50)
+    return volume_rect.collidepoint(mouse_pos)
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, camera_offset=0, tower_size=0, width=250):
@@ -473,6 +522,9 @@ def pause_screen(screen, font_large, font_small, tower, block):
                     return "restart"
                 elif event.key == pygame.K_q:
                     return "quit"
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if check_volume_button_click(event.pos):
+                    toggle_music()
         screen.fill((135, 206, 235))
         draw_backgrounds(tower.camera_y)
         tower.draw()
@@ -499,6 +551,10 @@ def pause_screen(screen, font_large, font_small, tower, block):
         draw_text_with_outline(screen, _( "quit_game"), font_small, menu_x + 60, y, (255, 150, 150))
         y += 50
         draw_text_with_outline(screen, _( "press_key"), font_small, menu_x + 40, y, (200, 200, 200))
+        
+        # Vẽ button volume
+        draw_volume_button(screen)
+        
         pygame.display.flip()
         clock.tick(30)
 
@@ -769,6 +825,9 @@ def show_main_menu(screen, font_large, font_small):
                         if selected == 0: return "play"
                         elif selected == 1: return "leaderboard"
                         elif selected == len(options) - 1: return "quit"
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if check_volume_button_click(event.pos):
+                    toggle_music()
         screen.fill((135, 206, 235))
         screen.blit(background1, (0, 0))
         title_panel = pygame.Surface((480, 120))
@@ -788,6 +847,10 @@ def show_main_menu(screen, font_large, font_small):
         if FIREBASE_ENABLED and firebase_auth.is_logged_in():
             draw_text_with_outline(screen, _( "logged_in_as", name=firebase_auth.username), font_small, 120, 250, (150, 255, 150))
         draw_text_with_outline(screen, _( "menu_nav"), font_small, 110, 620, (200, 200, 200))
+        
+        # Vẽ button volume
+        draw_volume_button(screen)
+        
         pygame.display.flip()
         clock.tick(60)
 
@@ -939,9 +1002,9 @@ def main():
         elif action == "login":
             if FIREBASE_ENABLED:
                 login_result = show_login_screen(
-    screen, background1, font_small, font_large,
-    firebase_auth, LANGUAGES, current_lang  # ← Đảm bảo đây là dictionary và string hợp lệ
-)
+                    screen, background1, font_small, font_large,
+                    firebase_auth, LANGUAGES, current_lang
+                )
                 if login_result == "quit":
                     break
             continue
