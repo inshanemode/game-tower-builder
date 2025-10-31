@@ -118,109 +118,170 @@ def show_login_screen(screen, background, font_small, font_large, firebase_auth)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
                 
+                # Tính lại vị trí panels
+                panel_width = 420
+                panel_height = 350 if mode == "login" else 400
+                panel_x = (600 - panel_width) // 2  # 90
+                panel_y = 150
+                input_width = 360
+                input_x = panel_x + 30
+                
                 # Check click vào input boxes
                 if mode == "login":
-                    if 200 <= mouse_pos[0] <= 600 and 220 <= mouse_pos[1] <= 260:
+                    # Email box
+                    email_y = panel_y + 70
+                    if input_x <= mouse_pos[0] <= input_x + input_width and email_y <= mouse_pos[1] <= email_y + 40:
                         active_field = "email"
-                    elif 200 <= mouse_pos[0] <= 600 and 290 <= mouse_pos[1] <= 330:
-                        active_field = "password"
-                    # Button login
-                    elif 300 <= mouse_pos[0] <= 500 and 370 <= mouse_pos[1] <= 420:
-                        if email and password:
-                            success, msg = firebase_auth.login(email, password)
-                            message = msg
-                            message_color = (100, 255, 100) if success else (255, 100, 100)
-                            message_timer = 180
-                            if success:
-                                return "logged_in"
-                    # Switch to register
-                    elif 250 <= mouse_pos[0] <= 550 and 480 <= mouse_pos[1] <= 510:
-                        mode = "register"
-                        active_field = "email"
-                        message = ""
+                    else:
+                        # Password box
+                        pwd_y = panel_y + 140
+                        if input_x <= mouse_pos[0] <= input_x + input_width and pwd_y <= mouse_pos[1] <= pwd_y + 40:
+                            active_field = "password"
+                        else:
+                            # Login button
+                            btn_width = 180
+                            btn_x = panel_x + (panel_width - btn_width) // 2
+                            btn_y = panel_y + 240
+                            if btn_x <= mouse_pos[0] <= btn_x + btn_width and btn_y <= mouse_pos[1] <= btn_y + 45:
+                                if email and password:
+                                    success, msg = firebase_auth.login(email, password)
+                                    message = msg
+                                    message_color = (100, 255, 100) if success else (255, 100, 100)
+                                    message_timer = 180
+                                    if success:
+                                        return "logged_in"
+                            # Switch to register text
+                            elif panel_x + 50 <= mouse_pos[0] <= panel_x + 370 and panel_y + 310 <= mouse_pos[1] <= panel_y + 330:
+                                mode = "register"
+                                active_field = "email"
+                                message = ""
                 else:
-                    if 200 <= mouse_pos[0] <= 600 and 200 <= mouse_pos[1] <= 240:
+                    # Email box
+                    email_y = panel_y + 60
+                    if input_x <= mouse_pos[0] <= input_x + input_width and email_y <= mouse_pos[1] <= email_y + 40:
                         active_field = "email"
-                    elif 200 <= mouse_pos[0] <= 600 and 260 <= mouse_pos[1] <= 300:
-                        active_field = "username"
-                    elif 200 <= mouse_pos[0] <= 600 and 320 <= mouse_pos[1] <= 360:
-                        active_field = "password"
-                    # Button register
-                    elif 300 <= mouse_pos[0] <= 500 and 400 <= mouse_pos[1] <= 450:
-                        if email and password and username:
-                            success, msg = firebase_auth.register(email, password, username)
-                            message = msg
-                            message_color = (100, 255, 100) if success else (255, 100, 100)
-                            message_timer = 180
-                            if success:
-                                return "logged_in"
-                    # Switch to login
-                    elif 250 <= mouse_pos[0] <= 550 and 500 <= mouse_pos[1] <= 530:
-                        mode = "login"
-                        active_field = "email"
-                        message = ""
+                    else:
+                        # Username box
+                        user_y = panel_y + 125
+                        if input_x <= mouse_pos[0] <= input_x + input_width and user_y <= mouse_pos[1] <= user_y + 40:
+                            active_field = "username"
+                        else:
+                            # Password box
+                            pwd_y = panel_y + 190
+                            if input_x <= mouse_pos[0] <= input_x + input_width and pwd_y <= mouse_pos[1] <= pwd_y + 40:
+                                active_field = "password"
+                            else:
+                                # Register button
+                                btn_width = 180
+                                btn_x = panel_x + (panel_width - btn_width) // 2
+                                btn_y = panel_y + 285
+                                if btn_x <= mouse_pos[0] <= btn_x + btn_width and btn_y <= mouse_pos[1] <= btn_y + 45:
+                                    if email and password and username:
+                                        success, msg = firebase_auth.register(email, password, username)
+                                        message = msg
+                                        message_color = (100, 255, 100) if success else (255, 100, 100)
+                                        message_timer = 180
+                                        if success:
+                                            return "logged_in"
+                                # Switch to login text
+                                elif panel_x + 50 <= mouse_pos[0] <= panel_x + 370 and panel_y + 355 <= mouse_pos[1] <= panel_y + 375:
+                                    mode = "login"
+                                    active_field = "email"
+                                    message = ""
         
         # Vẽ
         screen.fill((135, 206, 235))
         screen.blit(background, (0, 0))
         
-        # Panel chính
-        panel = pygame.Surface((450, 400 if mode == "login" else 450))
+        # Panel chính - scale 78%: 450*0.78 = 351, 400*0.78 = 312, 450*0.78 = 351
+        panel_width = 420
+        panel_height = 350 if mode == "login" else 400
+        panel = pygame.Surface((panel_width, panel_height))
         panel.fill((30, 30, 50))
-        pygame.draw.rect(panel, (100, 150, 255), (0, 0, 450, panel.get_height()), 6)
-        screen.blit(panel, (175, 100))
+        pygame.draw.rect(panel, (100, 150, 255), (0, 0, panel_width, panel_height), 6)
         
-        # Title
+        # Căn giữa theo screen 600px: (600-420)/2 = 90
+        panel_x = (600 - panel_width) // 2
+        panel_y = 150
+        screen.blit(panel, (panel_x, panel_y))
+        
+        # Title - căn giữa
         title = "DANG NHAP" if mode == "login" else "DANG KY"
-        draw_text_with_outline(screen, title, font_large, 330, 120, (255, 255, 150))
+        title_font = pygame.font.SysFont("Segoe UI", 28, bold=True)
+        draw_text_with_outline(screen, title, title_font, panel_x + 130, panel_y + 15, (255, 255, 150))
         
         if mode == "login":
+            # Input boxes width: 360px (420-60 for padding)
+            input_width = 360
+            input_x = panel_x + 30
+            
             # Email
-            draw_text_with_outline(screen, "Email:", font_small, 210, 190, (200, 200, 255))
-            draw_input_box(screen, font_small, 200, 220, 400, 40, email, active_field == "email")
+            y_pos = panel_y + 70
+            draw_text_with_outline(screen, "Email:", font_small, input_x + 5, y_pos - 25, (200, 200, 255))
+            draw_input_box(screen, font_small, input_x, y_pos, input_width, 40, email, active_field == "email")
             
             # Password
-            draw_text_with_outline(screen, "Mat khau:", font_small, 210, 260, (200, 200, 255))
-            draw_input_box(screen, font_small, 200, 290, 400, 40, password, active_field == "password", password=True)
+            y_pos += 70
+            draw_text_with_outline(screen, "Mat khau:", font_small, input_x + 5, y_pos - 25, (200, 200, 255))
+            draw_input_box(screen, font_small, input_x, y_pos, input_width, 40, password, active_field == "password", password=True)
             
-            # Login button
-            login_btn = pygame.Surface((200, 50))
+            # Login button - 180x45
+            btn_width = 180
+            btn_height = 45
+            btn_x = panel_x + (panel_width - btn_width) // 2
+            btn_y = panel_y + 240
+            login_btn = pygame.Surface((btn_width, btn_height))
             login_btn.fill((50, 150, 50))
-            pygame.draw.rect(login_btn, (100, 255, 100), (0, 0, 200, 50), 3)
-            screen.blit(login_btn, (300, 370))
-            draw_text_with_outline(screen, "Dang nhap", font_small, 335, 382, (255, 255, 255))
+            pygame.draw.rect(login_btn, (100, 255, 100), (0, 0, btn_width, btn_height), 3)
+            screen.blit(login_btn, (btn_x, btn_y))
+            draw_text_with_outline(screen, "Dang nhap", font_small, btn_x + 45, btn_y + 12, (255, 255, 255))
             
             # Switch to register
-            draw_text_with_outline(screen, "Chua co tai khoan? Dang ky tai day", font_small, 250, 485, (200, 200, 255))
+            draw_text_with_outline(screen, "Chua co tai khoan? Dang ky tai day", font_small, panel_x + 50, panel_y + 310, (200, 200, 255))
             
         else:
+            # Input boxes
+            input_width = 360
+            input_x = panel_x + 30
+            
             # Email
-            draw_text_with_outline(screen, "Email:", font_small, 210, 170, (200, 200, 255))
-            draw_input_box(screen, font_small, 200, 200, 400, 40, email, active_field == "email")
+            y_pos = panel_y + 60
+            draw_text_with_outline(screen, "Email:", font_small, input_x + 5, y_pos - 22, (200, 200, 255))
+            draw_input_box(screen, font_small, input_x, y_pos, input_width, 40, email, active_field == "email")
             
             # Username
-            draw_text_with_outline(screen, "Ten hien thi:", font_small, 210, 240, (200, 200, 255))
-            draw_input_box(screen, font_small, 200, 260, 400, 40, username, active_field == "username")
+            y_pos += 65
+            draw_text_with_outline(screen, "Ten hien thi:", font_small, input_x + 5, y_pos - 22, (200, 200, 255))
+            draw_input_box(screen, font_small, input_x, y_pos, input_width, 40, username, active_field == "username")
             
             # Password
-            draw_text_with_outline(screen, "Mat khau:", font_small, 210, 300, (200, 200, 255))
-            draw_input_box(screen, font_small, 200, 320, 400, 40, password, active_field == "password", password=True)
+            y_pos += 65
+            draw_text_with_outline(screen, "Mat khau:", font_small, input_x + 5, y_pos - 22, (200, 200, 255))
+            draw_input_box(screen, font_small, input_x, y_pos, input_width, 40, password, active_field == "password", password=True)
             
-            # Register button
-            register_btn = pygame.Surface((200, 50))
+            # Register button - 180x45
+            btn_width = 180
+            btn_height = 45
+            btn_x = panel_x + (panel_width - btn_width) // 2
+            btn_y = panel_y + 285
+            register_btn = pygame.Surface((btn_width, btn_height))
             register_btn.fill((50, 100, 150))
-            pygame.draw.rect(register_btn, (100, 150, 255), (0, 0, 200, 50), 3)
-            screen.blit(register_btn, (300, 400))
-            draw_text_with_outline(screen, "Dang ky", font_small, 350, 412, (255, 255, 255))
+            pygame.draw.rect(register_btn, (100, 150, 255), (0, 0, btn_width, btn_height), 3)
+            screen.blit(register_btn, (btn_x, btn_y))
+            draw_text_with_outline(screen, "Dang ky", font_small, btn_x + 55, btn_y + 12, (255, 255, 255))
             
             # Switch to login
-            draw_text_with_outline(screen, "Da co tai khoan? Dang nhap tai day", font_small, 250, 505, (200, 200, 255))
+            draw_text_with_outline(screen, "Da co tai khoan? Dang nhap tai day", font_small, panel_x + 50, panel_y + 355, (200, 200, 255))
         
-        # Message
+        # Message - căn giữa dưới panel
         if message:
-            draw_text_with_outline(screen, message, font_small, 250, 550, message_color)
+            msg_y = panel_y + panel_height + 20
+            # Tính toán để căn giữa message
+            msg_width_estimate = len(message) * 10
+            msg_x = (600 - msg_width_estimate) // 2
+            draw_text_with_outline(screen, message, font_small, msg_x, msg_y, message_color)
         
-        # Instructions
-        draw_text_with_outline(screen, "ESC - Quay lai", font_small, 310, 570, (180, 180, 180))
+        # Instructions - dưới cùng
+        draw_text_with_outline(screen, "ESC - Quay lai", font_small, 240, 730, (180, 180, 180))
         
         pygame.display.flip()
