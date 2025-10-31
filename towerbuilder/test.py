@@ -156,7 +156,7 @@ wind_change_interval = 180
 
 
 
-# Cấu hình độ khó (10 level)
+# Cấu hình độ khó (10 level cơ bản, từ level 11+ sẽ tăng force_multiplier thêm 1 mỗi level)
 
 DIFFICULTY_LEVELS = {
 
@@ -172,13 +172,15 @@ DIFFICULTY_LEVELS = {
 
     6: {"force_multiplier": 3.4, "rope_length": 200, "grav": 0.95},
 
-    7: {"force_multiplier": 3.8, "rope_length": 200, "grav": 1.0},
+    7: {"force_multiplier": 4, "rope_length": 200, "grav": 1.0},
 
-    8: {"force_multiplier": 4.3, "rope_length": 180, "grav": 1.1},
+    8: {"force_multiplier": 5, "rope_length": 180, "grav": 1.1},
 
-    9: {"force_multiplier": 4.6, "rope_length": 180, "grav": 1.2},
+    9: {"force_multiplier": 6, "rope_length": 180, "grav": 1.2},
 
-    10: {"force_multiplier": 5, "rope_length": 180, "grav": 1.3},
+    10: {"force_multiplier": 8, "rope_length": 180, "grav": 1.3},
+
+    # Level 11+ sẽ được tính động trong adjust_difficulty
 
 }
 
@@ -370,9 +372,17 @@ class Block(pygame.sprite.Sprite):
 
                    
 
+                    # Kích thước tối thiểu
+
+                    MIN_WIDTH = 40
+
+                   
+
                     new_width = self.width
 
                    
+
+                    # PERFECT (offset <= 15)
 
                     if offset <= 15:
 
@@ -408,6 +418,10 @@ class Block(pygame.sprite.Sprite):
 
                         points = 100
 
+                    
+
+                    # GOOD (offset <= 25)
+
                     elif offset <= 25:
 
                         points = 50
@@ -426,15 +440,64 @@ class Block(pygame.sprite.Sprite):
 
                         self.image = pygame.transform.scale(original_image, (self.width, self.height))
 
-                    else:
+                    
 
-                        # Đặt không chính xác nhưng vẫn chấp nhận - không cắt block
+                    # BAD (offset > 25) - Thu nhỏ từ level 5
+
+                    else:
 
                         points = 25
 
-                        new_width = self.width
+                        
 
-                   
+                        
+                        # Thu nhỏ block từ level 5 trở đi (giảm cố định mỗi lần)
+
+                        if current_level >= 5:
+
+                            # Số pixel giảm cố định mỗi lần (có thể chỉnh 20,15,25...)
+
+                            SHRINK_AMOUNT = 20
+
+                            
+
+                            # Tính kích thước mới, không nhỏ hơn MIN_WIDTH
+
+                            new_width = max(self.width - SHRINK_AMOUNT, MIN_WIDTH)
+
+                            
+
+                            # Cập nhật kích thước (vuông)
+
+                            self.width = new_width
+
+                            self.height = new_width
+
+                            
+
+                            # Giữ nguyên self.xlast - vị trí block đặt xuống (không căn giữa)
+
+                            
+
+                            # Điều chỉnh vị trí Y để block nằm đúng trên tháp
+
+                            self.y = tower.get_top_y() - self.height
+
+                            
+
+                            # Load lại ảnh với kích thước mới
+
+                            block_number = random.randint(1, 4)
+
+                            block_path = os.path.join(BASE_DIR, "assets", f"normal{block_number}.png")
+
+                            original_image = pygame.image.load(block_path)
+
+                            self.image = pygame.transform.scale(original_image, (self.width, self.height))
+
+                        else:
+
+                            new_width = self.width                   
 
                     return {"points": points, "new_width": new_width}
 
@@ -644,9 +707,15 @@ def draw_scoreboard(screen, font_large, font_small, score, level, combo):
 
    
 
-    difficulty_level = min(level, 10)
+    # Hiển thị độ khó: Level 11+ sẽ hiển thị "MAX+" thay vì giới hạn /10
 
-    draw_text_with_outline(screen, f"Do kho: {difficulty_level}/10", font_small, 515, y_offset, (255, 150, 255))
+    if level <= 10:
+
+        draw_text_with_outline(screen, f"Do kho: {level}/10", font_small, 515, y_offset, (255, 150, 255))
+
+    else:
+
+        draw_text_with_outline(screen, f"Do kho: MAX+{level-10}", font_small, 515, y_offset, (255, 100, 100))
 
     y_offset += 30
 
@@ -662,15 +731,35 @@ def adjust_difficulty(level):
 
     global force, rope_length, grav
 
-    difficulty_level = min(level, 10)
+    
 
-    config = DIFFICULTY_LEVELS[difficulty_level]
+    # Level 1-10: dùng config có sẵn
 
-    force = -0.001 * config["force_multiplier"]
+    if level <= 10:
 
-    rope_length = config["rope_length"]
+        config = DIFFICULTY_LEVELS[level]
 
-    grav = config["grav"]
+        force = -0.001 * config["force_multiplier"]
+
+        rope_length = config["rope_length"]
+
+        grav = config["grav"]
+
+    else:
+
+        # Level 11+: tăng force_multiplier thêm 1 mỗi level, giữ nguyên rope và grav của level 10
+
+        base_config = DIFFICULTY_LEVELS[10]
+
+        extra_levels = level - 10
+
+        force_multiplier = base_config["force_multiplier"] + extra_levels  # Tăng thêm 1 mỗi level
+
+        force = -0.001 * force_multiplier
+
+        rope_length = base_config["rope_length"]  # Giữ nguyên 180
+
+        grav = base_config["grav"]  # Giữ nguyên 1.3
 
 
 
@@ -1615,6 +1704,18 @@ def play_game(screen, font_small, font_large):
 
 
         if level >= 4:
+
+            # Tính wind_change_interval giảm dần theo level (gió đổi chiều nhanh hơn khi level cao)
+
+            # Level 4: 180 frames (~3s), Level 10: 90 frames (~1.5s), Level 15+: 60 frames (~1s)
+
+            base_interval = 180
+
+            interval_reduction = (level - 4) * 10  # Giảm 10 frames mỗi level
+
+            wind_change_interval = max(60, base_interval - interval_reduction)  # Tối thiểu 60 frames
+
+            
 
             wind_timer += 1
 
