@@ -6,7 +6,7 @@ import time
 import random
 from math import sin, cos, radians
 
-# Import Firebase (comment dòng này nếu chưa setup Firebase)
+# Import Firebase
 try:
     from firebase_config import firebase_auth
     from login_screen import show_login_screen
@@ -14,13 +14,6 @@ try:
 except ImportError:
     FIREBASE_ENABLED = False
     print("Firebase chưa được cấu hình. Chỉ dùng leaderboard local.")
-
-current_lang = "vi"  # hoặc "en"
-
-LANGUAGES = {
-    "vi": { ... },
-    "en": { ... }
-}
 
 # === CẤU HÌNH MỚI: 600x800 ===
 SCREEN_WIDTH = 600
@@ -34,7 +27,6 @@ pygame.display.set_caption("Tower Building Game")
 
 # === HỖ TRỢ ĐA NGÔN NGỮ ===
 current_lang = "vi"  # Mặc định là tiếng Việt
-
 LANGUAGES = {
     "vi": {
         "game_title": "TOWER BUILDER",
@@ -73,6 +65,8 @@ LANGUAGES = {
         "reload": "R: Tải lại",
         "logged_in_as": "Xin chào: {name}",
         "menu_play": "CHƠI",
+        "menu_play_infinite": "Vô hạn",
+        "menu_play_timed": "Thời gian",
         "menu_leaderboard": "BẢNG XẾP HẠNG",
         "menu_login": "ĐĂNG NHẬP",
         "menu_logout": "ĐĂNG XUẤT",
@@ -82,6 +76,7 @@ LANGUAGES = {
         "level3_wind": "Level 3: GIÓ NHẸ",
         "level5_wind_strong": "Level 5: GIÓ MẠNH !",
         "level7_shrink": "Level 7: CẮT KHỐI KHI ĐẶT LỆCH!",
+        "time_left": "Thời gian: {time}s",
         # Login screen translations
         "login_title": "ĐĂNG NHẬP",
         "register_title": "ĐĂNG KÝ",
@@ -133,6 +128,8 @@ LANGUAGES = {
         "reload": "R: Reload",
         "logged_in_as": "Hello: {name}",
         "menu_play": "PLAY",
+        "menu_play_infinite": "Infinite",
+        "menu_play_timed": "Time Attack",
         "menu_leaderboard": "LEADERBOARD",
         "menu_login": "LOGIN",
         "menu_logout": "LOGOUT",
@@ -142,6 +139,7 @@ LANGUAGES = {
         "level3_wind": "Level 3: LIGHT WIND",
         "level5_wind_strong": "Level 5: STRONG WIND!",
         "level7_shrink": "Level 7: BLOCK SHRINKS ON MISALIGN!",
+        "time_left": "Time: {time}s",
         # Login screen translations
         "login_title": "LOGIN",
         "register_title": "REGISTER",
@@ -164,7 +162,6 @@ def set_language(lang):
         current_lang = lang
 
 def _(key, **kwargs):
-    """Hàm dịch: _() giống như i18n.t()"""
     text = LANGUAGES[current_lang].get(key, key)
     try:
         return text.format(**kwargs)
@@ -176,7 +173,7 @@ BASE_DIR = os.path.dirname(__file__)
 background1_path = os.path.join(BASE_DIR, "assets", "background1.png")
 background2_path = os.path.join(BASE_DIR, "assets", "background2.png")
 
-# Load background1 (dưới đất)
+# Load background1
 if os.path.exists(background1_path):
     background1 = pygame.image.load(background1_path)
     background1 = pygame.transform.scale(background1, (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -187,7 +184,7 @@ else:
         color_value = int(135 + (y / SCREEN_HEIGHT) * 50)
         pygame.draw.line(background1, (135, 206, color_value), (0, y), (SCREEN_WIDTH, y))
 
-# Load background2 (trên cao)
+# Load background2
 if os.path.exists(background2_path):
     background2 = pygame.image.load(background2_path)
     background2 = pygame.transform.scale(background2, (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -197,14 +194,37 @@ else:
     background2 = background1.copy()
 
 pygame.mixer.init()
-try:
-    music_path = os.path.join(BASE_DIR, "assets", "basicsong.mp3")
-    pygame.mixer.music.load(music_path)
-    pygame.mixer.music.set_volume(0.3)
-    pygame.mixer.music.play(-1)
-    print("✓ Đã bật nhạc nền")
-except Exception as e:
-    print(f"⚠ Không tải được nhạc: {e}")
+
+# Danh sách nhạc nền
+music_playlist = []
+current_music_index = 0
+
+# Kiểm tra và thêm file nhạc hợp lệ
+music_files = ["basicsong.mp3", "basicsong2.mp3"]
+for music_file in music_files:
+    music_path = os.path.join(BASE_DIR, "assets", music_file)
+    if os.path.exists(music_path):
+        try:
+            # Thử load để kiểm tra file có hợp lệ không
+            test_load = pygame.mixer.music.load(music_path)
+            music_playlist.append(music_path)
+            print(f"✓ Đã thêm {music_file} vào playlist")
+        except Exception as e:
+            print(f"⚠ Bỏ qua {music_file} (lỗi: {e})")
+
+# Phát nhạc đầu tiên
+if music_playlist:
+    try:
+        pygame.mixer.music.load(music_playlist[current_music_index])
+        pygame.mixer.music.set_volume(0.3)
+        pygame.mixer.music.play()
+        # Đặt event khi nhạc kết thúc
+        pygame.mixer.music.set_endevent(pygame.USEREVENT + 1)
+        print(f"✓ Đã bật nhạc nền ({len(music_playlist)} bài)")
+    except Exception as e:
+        print(f"⚠ Không phát được nhạc: {e}")
+else:
+    print("⚠ Không tìm thấy file nhạc hợp lệ nào")
 
 # Load âm thanh perfect
 perfect_sound = None
@@ -239,7 +259,6 @@ clock = pygame.time.Clock()
 wind_force = 0
 wind_direction = 1
 wind_timer = 0
-wind_change_interval = 180
 
 # Cấu hình độ khó
 DIFFICULTY_LEVELS = {
@@ -275,7 +294,6 @@ def draw_text_with_outline(surface, text, font, x, y, color, outline_color=(0, 0
     surface.blit(text_surface, (x, y))
 
 def toggle_music():
-    """Bật/tắt nhạc"""
     global music_enabled
     music_enabled = not music_enabled
     if music_enabled:
@@ -287,28 +305,100 @@ def toggle_music():
         if perfect_sound:
             perfect_sound.set_volume(0)
 
+def play_next_music():
+    """Chuyển sang bài nhạc tiếp theo trong playlist"""
+    global current_music_index
+    if not music_playlist:
+        return
+    
+    # Thử phát bài tiếp theo
+    attempts = 0
+    max_attempts = len(music_playlist)
+    
+    while attempts < max_attempts:
+        current_music_index = (current_music_index + 1) % len(music_playlist)
+        try:
+            pygame.mixer.music.load(music_playlist[current_music_index])
+            if music_enabled:
+                pygame.mixer.music.set_volume(0.3)
+            else:
+                pygame.mixer.music.set_volume(0)
+            pygame.mixer.music.play()
+            print(f"♪ Đang phát: {os.path.basename(music_playlist[current_music_index])}")
+            return  # Phát thành công, thoát
+        except Exception as e:
+            print(f"⚠ Lỗi phát {os.path.basename(music_playlist[current_music_index])}: {e}")
+            # Xóa file lỗi khỏi playlist
+            bad_file = music_playlist.pop(current_music_index)
+            print(f"⚠ Đã loại bỏ {os.path.basename(bad_file)} khỏi playlist")
+            
+            # Điều chỉnh index sau khi xóa
+            if current_music_index >= len(music_playlist):
+                current_music_index = 0
+            
+            # Nếu không còn bài nào, thoát
+            if not music_playlist:
+                print("⚠ Không còn bài hát hợp lệ")
+                return
+            
+            attempts += 1
+    
+    print("⚠ Không thể phát bài nào trong playlist")
+
 def draw_volume_button(screen):
-    """Vẽ button volume ở góc trái dưới"""
     volume_x = 20
     volume_y = SCREEN_HEIGHT - 70
-    
-    # Vẽ icon (không có khung)
     if volume_icon:
         screen.blit(volume_icon, (volume_x, volume_y))
-    
-    # Vẽ dấu X nếu tắt âm
     if not music_enabled:
         pygame.draw.line(screen, (255, 50, 50), (volume_x + 5, volume_y + 5), (volume_x + 45, volume_y + 45), 5)
         pygame.draw.line(screen, (255, 50, 50), (volume_x + 45, volume_y + 5), (volume_x + 5, volume_y + 45), 5)
-    
     return pygame.Rect(volume_x, volume_y, 50, 50)
 
 def check_volume_button_click(mouse_pos):
-    """Kiểm tra click vào button volume"""
     volume_x = 20
     volume_y = SCREEN_HEIGHT - 70
     volume_rect = pygame.Rect(volume_x, volume_y, 50, 50)
     return volume_rect.collidepoint(mouse_pos)
+
+# =============== MENU CHỌN CHẾ ĐỘ ===============
+def show_play_mode_menu(screen, font_large, font_small):
+    options = [
+        _("menu_play_infinite"),
+        _("menu_play_timed")
+    ]
+    selected = 0
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return None
+            if event.type == pygame.USEREVENT + 1:  # Nhạc kết thúc
+                play_next_music()
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_UP, pygame.K_w):
+                    selected = (selected - 1) % len(options)
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
+                    selected = (selected + 1) % len(options)
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    return "infinite" if selected == 0 else "timed"
+                elif event.key == pygame.K_ESCAPE:
+                    return None
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if check_volume_button_click(event.pos):
+                    toggle_music()
+        screen.fill((135, 206, 235))
+        screen.blit(background1, (0, 0))
+        panel = pygame.Surface((400, 200))
+        panel.fill((30, 30, 50))
+        pygame.draw.rect(panel, (100, 150, 255), (0, 0, 400, 200), 4)
+        screen.blit(panel, (100, 300))
+        y = 340
+        for i, opt in enumerate(options):
+            color = (255, 255, 150) if i == selected else (255, 255, 255)
+            draw_text_with_outline(screen, opt, font_large, 150, y, color)
+            y += 60
+        pygame.display.flip()
+        clock.tick(60)
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, camera_offset=0, tower_size=0, width=250):
@@ -515,6 +605,8 @@ def pause_screen(screen, font_large, font_small, tower, block):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
+            if event.type == pygame.USEREVENT + 1:  # Nhạc kết thúc
+                play_next_music()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_p or event.key == pygame.K_ESCAPE:
                     return "resume"
@@ -551,19 +643,18 @@ def pause_screen(screen, font_large, font_small, tower, block):
         draw_text_with_outline(screen, _( "quit_game"), font_small, menu_x + 60, y, (255, 150, 150))
         y += 50
         draw_text_with_outline(screen, _( "press_key"), font_small, menu_x + 40, y, (200, 200, 200))
-        
-        # Vẽ button volume
         draw_volume_button(screen)
-        
         pygame.display.flip()
         clock.tick(30)
 
-def game_over_screen(screen, font_large, font_small, tower, block, score, level):
+def game_over_screen(screen, font_large, font_small, tower, block, score, level, mode="infinite"):
     waiting = True
     while waiting:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
+            if event.type == pygame.USEREVENT + 1:  # Nhạc kết thúc
+                play_next_music()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     return "restart"
@@ -571,35 +662,60 @@ def game_over_screen(screen, font_large, font_small, tower, block, score, level)
                     return "leaderboard"
                 elif event.key == pygame.K_ESCAPE:
                     return "menu"
+        
         screen.fill((135, 206, 235))
         draw_backgrounds(tower.camera_y)
         tower.draw()
         block.draw(tower.camera_y)
+        
+        # Tạo lớp overlay mờ
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(180)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+        
+        # Panel chính
         menu_width = int(500 * 0.78)
-        menu_height = int(400 * 0.78)
+        menu_height = int(450 * 0.78)  # Tăng chiều cao panel
         menu_x = (SCREEN_WIDTH - menu_width) // 2
-        menu_y = 250
+        menu_y = 230  # Dịch lên một chút để cân đối
         go_surface = pygame.Surface((menu_width, menu_height))
         go_surface.fill((30, 30, 50))
         pygame.draw.rect(go_surface, (255, 80, 80), (0, 0, menu_width, menu_height), 4)
         pygame.draw.rect(go_surface, (200, 50, 50), (4, 4, menu_width-8, menu_height-8), 2)
         screen.blit(go_surface, (menu_x, menu_y))
-        draw_text_with_outline(screen, _( "game_over"), font_large, menu_x + 70, menu_y + 20, (255, 100, 100))
-        y = menu_y + 80
-        draw_text_with_outline(screen, f"{_( 'final_score')}: {score}", font_small, menu_x + 80, y, (255, 255, 100))
-        y += 45
-        draw_text_with_outline(screen, f"{_( 'level_reached')}: {level}", font_small, menu_x + 80, y, (150, 200, 255))
-        y += 55
+        
+        # Tiêu đề
+        draw_text_with_outline(screen, _("game_over"), font_large, menu_x + 70, menu_y + 20, (255, 100, 100))
+        
+        y = menu_y + 85  # Dòng đầu tiên: điểm
+        draw_text_with_outline(screen, f"{_('final_score')}: {score}", font_small, menu_x + 80, y, (255, 255, 100))
+        
+        y += 40  # Giảm khoảng cách một chút cho gọn
+        draw_text_with_outline(screen, f"{_('level_reached')}: {level}", font_small, menu_x + 80, y, (150, 200, 255))
+        
+        # Dòng chế độ (Time Attack / Infinite)
+        if mode == "timed":
+            y += 40
+            draw_text_with_outline(screen, _("Time Attack Mode"), font_small, menu_x + 80, y, (100, 200, 255))
+        
+        # Dòng lưu điểm
+        y += 50
         if FIREBASE_ENABLED and firebase_auth.is_logged_in():
-            draw_text_with_outline(screen, _( "saved_online"), font_small, menu_x + 60, y, (150, 255, 150))
+            draw_text_with_outline(screen, _("saved_online"), font_small, menu_x + 60, y, (150, 255, 150))
         else:
-            draw_text_with_outline(screen, _( "saved_local"), font_small, menu_x + 65, y, (200, 200, 255))
+            draw_text_with_outline(screen, _("saved_local"), font_small, menu_x + 65, y, (200, 200, 255))
+        
+        # Các nút hướng dẫn
         y += 55
-        draw_text_with_outline(screen, _( "play_again"), font_small, menu_x + 80, y, (255, 255, 150))
+        draw_text_with_outline(screen, _("play_again"), font_small, menu_x + 80, y, (255, 255, 150))
+        
         y += 40
-        draw_text_with_outline(screen, _( "view_leaderboard"), font_small, menu_x + 30, y, (255, 200, 100))
+        draw_text_with_outline(screen, _("view_leaderboard"), font_small, menu_x + 30, y, (255, 200, 100))
+        
         y += 40
-        draw_text_with_outline(screen, _( "back_menu"), font_small, menu_x + 80, y, (255, 200, 200))
+        draw_text_with_outline(screen, _("back_menu"), font_small, menu_x + 80, y, (255, 200, 200))
+        
         pygame.display.flip()
         clock.tick(60)
 
@@ -630,8 +746,14 @@ def draw_wind_indicator(screen, font_small, level, wind_force, wind_direction):
     color = (255, 100, 100) if level >= 5 else (255, 255, 150)
     draw_text_with_outline(screen, wind_text, font_small, 22, 135, color)
 
-def load_leaderboard(max_entries=10):
-    leaderboard_path = os.path.join(BASE_DIR, "leaderboard.json")
+def draw_timer(screen, font, remaining):
+    """Vị trí: giữa bảng thông tin và hướng dẫn → khoảng y=110"""
+    timer_text = _( "time_left", time=int(remaining))
+    draw_text_with_outline(screen, timer_text, font, SCREEN_WIDTH // 2 - 60, 110, (255, 255, 100))
+
+def load_leaderboard(mode="infinite", max_entries=10):
+    filename = f"leaderboard_{mode}.json"
+    leaderboard_path = os.path.join(BASE_DIR, filename)
     scores = []
     if os.path.exists(leaderboard_path):
         try:
@@ -640,31 +762,19 @@ def load_leaderboard(max_entries=10):
                 if isinstance(data, list):
                     scores = data
         except Exception as e:
-            print(f"Lỗi đọc leaderboard: {e}")
-            try:
-                txt_path = os.path.join(BASE_DIR, "leaderboard.txt")
-                if os.path.exists(txt_path):
-                    with open(txt_path, "r", encoding="utf-8") as f:
-                        for line in f:
-                            line = line.strip()
-                            if line:
-                                try:
-                                    scores.append({"username": "Guest", "score": int(line), "level": 0})
-                                except ValueError:
-                                    continue
-            except Exception:
-                pass
+            print(f"Lỗi đọc leaderboard {mode}: {e}")
     scores.sort(key=lambda x: x.get('score', 0), reverse=True)
     return scores[:max_entries]
 
-def save_score_to_leaderboard(score, level=1, username=None, max_entries=10):
-    leaderboard_path = os.path.join(BASE_DIR, "leaderboard.json")
+def save_score_to_leaderboard(score, level=1, username=None, mode="infinite", max_entries=10):
+    filename = f"leaderboard_{mode}.json"
+    leaderboard_path = os.path.join(BASE_DIR, filename)
     if username is None:
         if FIREBASE_ENABLED and firebase_auth.is_logged_in():
             username = firebase_auth.username
         else:
             username = "Guest"
-    scores = load_leaderboard(max_entries=max_entries*2)
+    scores = load_leaderboard(mode=mode, max_entries=max_entries*2)
     scores.append({"username": username, "score": int(score), "level": int(level)})
     scores.sort(key=lambda x: x.get('score', 0), reverse=True)
     scores = scores[:max_entries]
@@ -672,9 +782,9 @@ def save_score_to_leaderboard(score, level=1, username=None, max_entries=10):
         with open(leaderboard_path, "w", encoding="utf-8") as f:
             json.dump(scores, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"Lỗi lưu leaderboard: {e}")
+        print(f"Lỗi lưu leaderboard {mode}: {e}")
 
-def show_leaderboard(screen, font_large, font_small, show_online=False, force_refresh=False):
+def show_leaderboard(screen, font_large, font_small, show_online=False, force_refresh=False, mode="infinite"):
     waiting = True
     current_tab = "online" if show_online and FIREBASE_ENABLED else "local"
     cached_local = None
@@ -690,6 +800,8 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
+            if event.type == pygame.USEREVENT + 1:  # Nhạc kết thúc
+                play_next_music()
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                     return "back"
@@ -723,14 +835,14 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
         else:
             draw_text_with_outline(screen, _( "reload"), font_small, lb_x + 220, tab_y, (200, 200, 200))
         if FIREBASE_ENABLED and current_tab == "online":
-            status_text = "Online"
+            status_text = f"Online ({mode})"  # Hiển thị chế độ
             if firebase_auth.is_logged_in():
                 status_text += f" - {firebase_auth.username}"
             draw_text_with_outline(screen, status_text, font_small, lb_x + 30, tab_y + 40, (150, 150, 150))
         y = lb_y + 120
         if current_tab == "local":
             if cached_local is None:
-                cached_local = load_leaderboard()
+                cached_local = load_leaderboard(mode=mode)
             scores = cached_local
             if not scores:
                 draw_text_with_outline(screen, _( "no_scores"), font_small, lb_x + 180, y, (255, 255, 255))
@@ -748,7 +860,7 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
                 if cached_online is None:
                     draw_text_with_outline(screen, _( "loading"), font_small, lb_x + 220, y, (200, 200, 200))
                     pygame.display.flip()
-                    cached_online = firebase_auth.get_leaderboard(10) or []
+                    cached_online = firebase_auth.get_leaderboard(10, mode=mode) or []
                 leaderboard = cached_online
                 if not leaderboard:
                     draw_text_with_outline(screen, _( "no_online_scores"), font_small, lb_x + 160, y, (255, 255, 255))
@@ -801,30 +913,41 @@ def show_main_menu(screen, font_large, font_small):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
+            if event.type == pygame.USEREVENT + 1:  # Nhạc kết thúc
+                play_next_music()
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_UP, pygame.K_w):
                     selected = (selected - 1) % len(options)
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
                     selected = (selected + 1) % len(options)
                 elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                    if selected == len(options) - 2:  # LANGUAGE option
-                        # Chuyển ngôn ngữ
+                    if selected == len(options) - 2:
                         set_language("en" if current_lang == "vi" else "vi")
                         return "menu_refresh"
                     elif FIREBASE_ENABLED:
-                        if selected == 0: return "play"
-                        elif selected == 1: return "leaderboard"
+                        if selected == 0:
+                            mode = show_play_mode_menu(screen, font_large, font_small)
+                            if mode:
+                                return ("play", mode)
+                        elif selected == 1:
+                            return "leaderboard"
                         elif selected == 2:
                             if firebase_auth.is_logged_in():
                                 firebase_auth.logout()
                                 return "menu_refresh"
                             else:
                                 return "login"
-                        elif selected == len(options) - 1: return "quit"
+                        elif selected == len(options) - 1:
+                            return "quit"
                     else:
-                        if selected == 0: return "play"
-                        elif selected == 1: return "leaderboard"
-                        elif selected == len(options) - 1: return "quit"
+                        if selected == 0:
+                            mode = show_play_mode_menu(screen, font_large, font_small)
+                            if mode:
+                                return ("play", mode)
+                        elif selected == 1:
+                            return "leaderboard"
+                        elif selected == len(options) - 1:
+                            return "quit"
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if check_volume_button_click(event.pos):
                     toggle_music()
@@ -847,14 +970,11 @@ def show_main_menu(screen, font_large, font_small):
         if FIREBASE_ENABLED and firebase_auth.is_logged_in():
             draw_text_with_outline(screen, _( "logged_in_as", name=firebase_auth.username), font_small, 120, 250, (150, 255, 150))
         draw_text_with_outline(screen, _( "menu_nav"), font_small, 110, 620, (200, 200, 200))
-        
-        # Vẽ button volume
         draw_volume_button(screen)
-        
         pygame.display.flip()
         clock.tick(60)
 
-def play_game(screen, font_small, font_large):
+def play_game(screen, font_small, font_large, mode="infinite"):
     global force, rope_length, grav, wind_force, wind_direction, wind_timer
     running = True
     tower = Tower()
@@ -866,15 +986,43 @@ def play_game(screen, font_small, font_large):
     wind_force = 0
     wind_direction = 1
     wind_timer = 0
-    wind_change_interval = 180
     level_up_message = ""
     level_up_timer = 0
     adjust_difficulty(level)
+
+    # Cấu hình cho timed mode
+    time_limit = 60
+    start_time = time.time() if mode == "timed" else None
+    time_bonus = 0  # thời gian cộng thêm do perfect
+
     while running:
         clock.tick(60)
+        current_time = time.time()
+        remaining_time = None
+        if mode == "timed":
+            elapsed = current_time - start_time - time_bonus  # TRỪ time_bonus để cộng thêm thời gian
+            remaining_time = max(0, time_limit - elapsed)
+            if remaining_time <= 0:
+                # Hết giờ → kết thúc
+                save_score_to_leaderboard(score, level, mode=mode)
+                if FIREBASE_ENABLED and firebase_auth.is_logged_in():
+                    firebase_auth.save_score(score, level, mode=mode)
+                time.sleep(0.5)
+                action = game_over_screen(screen, font_large, font_small, tower, block, score, level, mode=mode)
+                if action == "restart":
+                    return "restart"
+                elif action == "leaderboard":
+                    return "leaderboard"
+                elif action == "menu":
+                    return "menu"
+                else:
+                    return "quit"
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
+            if event.type == pygame.USEREVENT + 1:  # Nhạc kết thúc
+                play_next_music()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     if block.state == "swinging":
@@ -885,6 +1033,7 @@ def play_game(screen, font_small, font_large):
                         return "menu"
                     elif pause_action == "restart":
                         return "restart"
+
         if level >= 5:
             wind_timer += 1
             if wind_timer >= 120:
@@ -912,11 +1061,11 @@ def play_game(screen, font_small, font_large):
                 new_width = result["new_width"]
                 if points == -1:
                     block.state = "failed"
-                    save_score_to_leaderboard(score, level)
+                    save_score_to_leaderboard(score, level, mode=mode)
                     if FIREBASE_ENABLED and firebase_auth.is_logged_in():
-                        firebase_auth.save_score(score, level)
+                        firebase_auth.save_score(score, level, mode=mode)
                     time.sleep(0.5)
-                    action = game_over_screen(screen, font_large, font_small, tower, block, score, level)
+                    action = game_over_screen(screen, font_large, font_small, tower, block, score, level, mode=mode)
                     if action == "restart":
                         return "restart"
                     elif action == "leaderboard":
@@ -928,6 +1077,8 @@ def play_game(screen, font_small, font_large):
                 else:
                     if points >= 50:
                         combo += 1
+                        if mode == "timed":
+                            time_bonus += 3  # +3 giây khi perfect
                     else:
                         combo = 0
                     score += points * max(1, combo)
@@ -957,7 +1108,8 @@ def play_game(screen, font_small, font_large):
         draw_instruction_panel(screen, font_small, level)
         draw_wind_indicator(screen, font_small, level, wind_force, wind_direction)
         draw_scoreboard(screen, font_large, font_small, score, level, combo)
-
+        if mode == "timed" and remaining_time is not None:
+            draw_timer(screen, pygame.font.SysFont("Segoe UI", 24, bold=True), remaining_time)
         if level_up_timer > 0:
             msg_surface = pygame.Surface((420, 80))
             msg_surface.set_alpha(220)
@@ -971,7 +1123,6 @@ def play_game(screen, font_small, font_large):
                 (255, 255, 150)
             )
             level_up_timer -= 1
-
         pygame.display.flip()
     return "menu"
 
@@ -991,7 +1142,6 @@ def main():
     if font_small is None:
         font_small = pygame.font.Font(None, 24)
         font_large = pygame.font.Font(None, 36)
-
     app_running = True
     while app_running:
         action = show_main_menu(screen, font_large, font_small)
@@ -1010,13 +1160,14 @@ def main():
             continue
         elif action == "leaderboard":
             show_online = FIREBASE_ENABLED and firebase_auth.is_logged_in()
-            lb_action = show_leaderboard(screen, font_large, font_small, show_online=show_online, force_refresh=True)
+            lb_action = show_leaderboard(screen, font_large, font_small, show_online=show_online, force_refresh=True, mode="infinite")
             if lb_action == "quit":
                 break
             continue
-        elif action == "play":
+        elif isinstance(action, tuple) and action[0] == "play":
+            game_mode = action[1]  # "infinite" or "timed"
             while True:
-                game_action = play_game(screen, font_small, font_large)
+                game_action = play_game(screen, font_small, font_large, mode=game_mode)
                 if game_action == "quit":
                     app_running = False
                     break
@@ -1024,7 +1175,7 @@ def main():
                     continue
                 elif game_action == "leaderboard":
                     show_online = FIREBASE_ENABLED and firebase_auth.is_logged_in()
-                    lb_action = show_leaderboard(screen, font_large, font_small, show_online=show_online, force_refresh=True)
+                    lb_action = show_leaderboard(screen, font_large, font_small, show_online=show_online, force_refresh=True, mode=game_mode)
                     if lb_action == "quit":
                         app_running = False
                         break

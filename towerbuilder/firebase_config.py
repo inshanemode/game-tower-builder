@@ -24,21 +24,43 @@ class FirebaseAuth:
         self.user_id = None
         self.username = None
     
-    def register(self, email, password, username):
-        """Đăng ký user mới"""
+    def is_username_taken(self, username, user_token=None):
+        """Kiểm tra xem username đã được dùng chưa trong /usernames"""
         try:
+            snapshot = db.child("usernames").child(username).get(user_token)
+            return snapshot.val() is not None
+        except Exception as e:
+            print(f"Lỗi kiểm tra username trùng: {e}")
+            return False
+
+    def register(self, email, password, username):
+        """Đăng ký user mới với username duy nhất"""
+        try:
+            # Bước 1: Tạo tài khoản Firebase bằng email & mật khẩu
             user = auth.create_user_with_email_and_password(email, password)
-            self.current_user = user
-            self.user_id = user['localId']
-            self.username = username
-            
-            # Lưu username vào database với token
+            user_id = user['localId']
             user_token = user['idToken']
-            db.child("users").child(self.user_id).set({
+
+            # Bước 2: Kiểm tra username có bị trùng không
+            if self.is_username_taken(username, user_token):
+                return False, "Tên người dùng đã tồn tại!"
+
+            # Bước 3: Lưu thông tin vào /users
+            db.child("users").child(user_id).set({
                 "username": username,
                 "email": email
             }, user_token)
+
+            # Bước 4: Ghi username vào /usernames để đánh dấu đã dùng
+            db.child("usernames").child(username).set(user_id, user_token)
+
+            # Cập nhật session
+            self.current_user = user
+            self.user_id = user_id
+            self.username = username
+
             return True, "Đăng ký thành công!"
+
         except Exception as e:
             error_msg = str(e)
             if "EMAIL_EXISTS" in error_msg:
@@ -47,7 +69,7 @@ class FirebaseAuth:
                 return False, "Mật khẩu quá yếu (tối thiểu 6 ký tự)!"
             elif "INVALID_EMAIL" in error_msg:
                 return False, "Email không hợp lệ!"
-            return False, f"Đăng ký thất bại!"
+            return False, f"Đăng ký thất bại: {error_msg}"
     
     def login(self, email, password):
         """Đăng nhập"""
@@ -91,8 +113,8 @@ class FirebaseAuth:
         """Kiểm tra đã đăng nhập chưa"""
         return self.current_user is not None
     
-    def save_score(self, score, level):
-        """Lưu điểm lên Firebase"""
+    def save_score(self, score, level, mode="infinite"):
+        """Lưu điểm lên Firebase theo mode (infinite/time_attack/...)"""
         if not self.is_logged_in():
             return False, "Chưa đăng nhập!"
         
@@ -100,15 +122,15 @@ class FirebaseAuth:
             # Lấy token hiện tại
             user_token = self.current_user.get('idToken')
             
-            # Lấy điểm cao nhất hiện tại
-            user_scores = db.child("scores").child(self.user_id).get(user_token)
+            # Lấy điểm cao nhất hiện tại của mode này
+            user_scores = db.child("scores").child(self.user_id).child(mode).get(user_token)
             current_best = 0
             if user_scores.val():
                 current_best = user_scores.val().get('best_score', 0)
             
             # Chỉ cập nhật nếu điểm mới cao hơn
             if score > current_best:
-                db.child("scores").child(self.user_id).set({
+                db.child("scores").child(self.user_id).child(mode).set({
                     "username": self.username,
                     "best_score": score,
                     "best_level": level,
@@ -119,37 +141,31 @@ class FirebaseAuth:
         except Exception as e:
             return False, f"Lỗi lưu điểm: {str(e)}"
     
-    def get_leaderboard(self, limit=10):
-        """Lấy bảng xếp hạng"""
+    def get_leaderboard(self, limit=10, mode="infinite"):
+        """Lấy bảng xếp hạng từ Firebase theo mode"""
+        if not self.is_logged_in():
+            return []  # Không đăng nhập → không load
+
         try:
-            # Lấy token nếu đã đăng nhập
-            user_token = None
-            if self.is_logged_in() and self.current_user:
-                user_token = self.current_user.get('idToken')
-            
-            # Lấy tất cả scores (không dùng orderBy để tránh lỗi index)
-            if user_token:
-                scores = db.child("scores").get(user_token)
-            else:
-                # Nếu chưa đăng nhập, không thể lấy leaderboard online
-                print("Cần đăng nhập để xem leaderboard online")
-                return []
-            
+            user_token = self.current_user['idToken']
+            # Đọc toàn bộ /scores — được phép nhờ rule mới
+            scores = db.child("scores").get(user_token)
             leaderboard = []
             if scores.val():
-                for user_id, data in scores.val().items():
-                    leaderboard.append({
-                        'username': data.get('username', 'Anonymous'),
-                        'score': data.get('best_score', 0),
-                        'level': data.get('best_level', 0)
-                    })
-            
-            # Sắp xếp giảm dần và lấy top limit
+                for user_id, user_data in scores.val().items():
+                    # Lọc theo mode
+                    if mode in user_data:
+                        mode_data = user_data[mode]
+                        leaderboard.append({
+                            'username': mode_data.get('username', 'Anonymous'),
+                            'score': mode_data.get('best_score', 0),
+                            'level': mode_data.get('best_level', 0)
+                        })
             leaderboard.sort(key=lambda x: x['score'], reverse=True)
             return leaderboard[:limit]
         except Exception as e:
             print(f"Lỗi tải leaderboard: {e}")
             return []
-
+    
 # Tạo instance global
 firebase_auth = FirebaseAuth()
