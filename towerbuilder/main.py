@@ -77,6 +77,9 @@ LANGUAGES = {
         "level5_wind_strong": "Level 5: GIÓ MẠNH !",
         "level7_shrink": "Level 7: CẮT KHỐI KHI ĐẶT LỆCH!",
         "time_left": "Thời gian: {time}s",
+        "mode_infinite": "VÔ HẠN",
+        "mode_timed": "THỜI GIAN",
+        "mode_label": "Chế độ",
         # Login screen translations
         "login_title": "ĐĂNG NHẬP",
         "register_title": "ĐĂNG KÝ",
@@ -140,6 +143,9 @@ LANGUAGES = {
         "level5_wind_strong": "Level 5: STRONG WIND!",
         "level7_shrink": "Level 7: BLOCK SHRINKS ON MISALIGN!",
         "time_left": "Time: {time}s",
+        "mode_infinite": "INFINITE",
+        "mode_timed": "TIME ATTACK",
+        "mode_label": "Mode",
         # Login screen translations
         "login_title": "LOGIN",
         "register_title": "REGISTER",
@@ -787,6 +793,7 @@ def save_score_to_leaderboard(score, level=1, username=None, mode="infinite", ma
 def show_leaderboard(screen, font_large, font_small, show_online=False, force_refresh=False, mode="infinite"):
     waiting = True
     current_tab = "online" if show_online and FIREBASE_ENABLED else "local"
+    current_mode = mode  # Chế độ hiện tại: infinite hoặc timed
     cached_local = None
     cached_online = None
     last_refresh = 0
@@ -810,6 +817,11 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
                         current_tab = "online" if current_tab == "local" else "local"
                         cached_local = None
                         cached_online = None
+                # Phím lên/xuống để chuyển mode
+                if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
+                    current_mode = "timed" if current_mode == "infinite" else "infinite"
+                    cached_local = None
+                    cached_online = None
                 if event.key == pygame.K_r:
                     cached_local = None
                     cached_online = None
@@ -825,24 +837,26 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
         pygame.draw.rect(panel, (200, 170, 0), (6, 6, lb_width-12, lb_height-12), 3)
         screen.blit(panel, (lb_x, lb_y))
         draw_text_with_outline(screen, _( "leaderboard_title"), font_large, lb_x + 180, lb_y + 20, (255, 255, 150))
-        tab_y = lb_y + 60
+        
+        # Hiển thị mode hiện tại
+        mode_display = _("mode_infinite") if current_mode == "infinite" else _("mode_timed")
+        mode_color = (100, 255, 150) if current_mode == "infinite" else (255, 150, 100)
+        draw_text_with_outline(screen, f"{_('mode_label')}: {mode_display}", font_small, lb_x + 180, lb_y + 55, mode_color)
+        
+        tab_y = lb_y + 85
         if FIREBASE_ENABLED:
             local_color = (100, 255, 100) if current_tab == "local" else (150, 150, 150)
             draw_text_with_outline(screen, _( "local_tab"), font_small, lb_x + 50, tab_y, local_color)
             online_color = (100, 150, 255) if current_tab == "online" else (150, 150, 150)
             draw_text_with_outline(screen, _( "online_tab"), font_small, lb_x + 440, tab_y, online_color)
-            draw_text_with_outline(screen, _( "switch_tab"), font_small, lb_x + 130, tab_y, (200, 200, 200))
+            draw_text_with_outline(screen, "<- ->: Tab | ↑↓: Mode | R: Reload", font_small, lb_x + 120, tab_y, (200, 200, 200))
         else:
-            draw_text_with_outline(screen, _( "reload"), font_small, lb_x + 220, tab_y, (200, 200, 200))
-        if FIREBASE_ENABLED and current_tab == "online":
-            status_text = f"Online ({mode})"  # Hiển thị chế độ
-            if firebase_auth.is_logged_in():
-                status_text += f" - {firebase_auth.username}"
-            draw_text_with_outline(screen, status_text, font_small, lb_x + 30, tab_y + 40, (150, 150, 150))
+            draw_text_with_outline(screen, "↑↓: Chuyển mode | R: Tải lại", font_small, lb_x + 160, tab_y, (200, 200, 200))
+        
         y = lb_y + 120
         if current_tab == "local":
             if cached_local is None:
-                cached_local = load_leaderboard(mode=mode)
+                cached_local = load_leaderboard(mode=current_mode)
             scores = cached_local
             if not scores:
                 draw_text_with_outline(screen, _( "no_scores"), font_small, lb_x + 180, y, (255, 255, 255))
@@ -860,7 +874,7 @@ def show_leaderboard(screen, font_large, font_small, show_online=False, force_re
                 if cached_online is None:
                     draw_text_with_outline(screen, _( "loading"), font_small, lb_x + 220, y, (200, 200, 200))
                     pygame.display.flip()
-                    cached_online = firebase_auth.get_leaderboard(10, mode=mode) or []
+                    cached_online = firebase_auth.get_leaderboard(10, mode=current_mode) or []
                 leaderboard = cached_online
                 if not leaderboard:
                     draw_text_with_outline(screen, _( "no_online_scores"), font_small, lb_x + 160, y, (255, 255, 255))
